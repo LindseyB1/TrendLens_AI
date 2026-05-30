@@ -86,6 +86,30 @@ def build_report_prompt(sources: list[dict]) -> str:
     Builds the full user prompt for the TrendLens report.
     """
     combined_sources = build_combined_sources(sources)
+    report_template = load_prompt("report_prompt.md")
+
+    if not report_template:
+        report_template = """
+Create a structured TrendLens AI Report with source overview, Bottom Line Up Front, executive summary, so what, key trends, risks or concerns, confidence level, follow up questions, and a 45 second brief.
+"""
+
+    return f"""
+Analyze the public information sources below and create one unified TrendLens AI situational awareness report.
+
+Use the report format and rules below.
+
+REPORT FORMAT AND RULES:
+{report_template}
+
+Important:
+Only use information from the provided sources.
+Do not invent facts.
+If dates, locations, actors, or outcomes are missing, say not provided.
+Focus on significance, patterns, uncertainty, and follow up questions.
+
+SOURCES:
+{combined_sources}
+"""
 
     return f"""
 Analyze the public information sources below and create one structured TrendLens AI situational awareness report.
