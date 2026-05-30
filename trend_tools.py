@@ -30,6 +30,7 @@ def load_prompt(prompt_name: str) -> str:
 def clean_source_text(text: str) -> str:
     """
     Cleans pasted source text so the model receives a clearer input.
+    This function acts as the source cleaning tool.
     """
     if not text:
         return ""
@@ -43,6 +44,7 @@ def clean_source_text(text: str) -> str:
 def build_source_block(source_label: str, source_url: str, source_text: str) -> str:
     """
     Creates one structured source block for the model.
+    This function acts as the source intake formatting tool.
     """
     cleaned_text = clean_source_text(source_text)
 
@@ -61,6 +63,7 @@ SOURCE TEXT:
 def build_combined_sources(sources: list[dict]) -> str:
     """
     Combines all user submitted sources into one structured input.
+    This function acts as the source consolidation tool.
     """
     source_blocks = []
 
@@ -84,6 +87,7 @@ SOURCE {index}
 def build_report_prompt(sources: list[dict]) -> str:
     """
     Builds the full user prompt for the TrendLens report.
+    This function acts as the prompt routing tool.
     """
     combined_sources = build_combined_sources(sources)
     report_template = load_prompt("report_prompt.md")
@@ -105,58 +109,8 @@ Important:
 Only use information from the provided sources.
 Do not invent facts.
 If dates, locations, actors, or outcomes are missing, say not provided.
+Do not force unrelated events into one false narrative.
 Focus on significance, patterns, uncertainty, and follow up questions.
-
-SOURCES:
-{combined_sources}
-"""
-
-    return f"""
-Analyze the public information sources below and create one structured TrendLens AI situational awareness report.
-
-The report must combine the sources into one unified product. Do not summarize each article separately unless needed in the Source Overview section.
-
-Use this exact structure:
-
-1. Source Overview
-For each source, identify:
-Date of article if available
-Date of event if available
-Location if available
-Main topic
-Relevance to the overall situation
-
-2. Bottom Line Up Front
-Provide 1 to 3 sentences explaining what matters most.
-
-3. Executive Summary
-Provide a concise paragraph explaining the overall situation.
-
-4. So What
-Explain why this matters and who may care.
-
-5. Key Trends
-Identify patterns, repeated themes, escalation indicators, or changes across the sources.
-
-6. Risks or Concerns
-Identify possible security, public safety, political, economic, infrastructure, or operational concerns.
-
-7. Confidence Level
-Assign High, Medium, or Low confidence. Explain why.
-
-8. Follow Up Questions
-List the most important questions a user should research next.
-
-9. 45 Second Brief
-Create a short briefing summary that could be read out loud in under 45 seconds.
-
-Important rules:
-Only use information from the provided sources.
-Do not invent facts.
-If dates, locations, or actors are missing, say not provided.
-Use clear analyst style writing.
-Avoid exaggerated claims.
-Focus on significance, patterns, and uncertainty.
 
 SOURCES:
 {combined_sources}
@@ -166,6 +120,7 @@ SOURCES:
 def generate_trendlens_report(sources: list[dict]) -> str:
     """
     Sends the structured source information to OpenAI and returns the report.
+    This function acts as the report generation tool.
     """
     api_key = os.getenv("OPENAI_API_KEY")
 
@@ -192,14 +147,14 @@ You do not invent facts.
             input=[
                 {
                     "role": "system",
-                    "content": system_prompt
+                    "content": system_prompt,
                 },
                 {
                     "role": "user",
-                    "content": user_prompt
-                }
+                    "content": user_prompt,
+                },
             ],
-            temperature=0.3
+            temperature=0.3,
         )
 
         return response.output_text
@@ -208,9 +163,38 @@ You do not invent facts.
         return f"Error generating report: {error}"
 
 
+def get_agent_workflow_summary(sources: list[dict]) -> str:
+    """
+    Explains the lightweight agent workflow used by TrendLens AI.
+    This makes the agentic design visible in the app.
+    """
+    source_count = len(sources)
+
+    return f"""
+TrendLens AI used a lightweight agentic workflow for this analysis.
+
+1. Source intake tool: collected {source_count} submitted public information source(s).
+
+2. Source cleaning tool: removed extra spacing and prepared the text for analysis.
+
+3. Source consolidation tool: combined the submitted sources into one structured source block.
+
+4. Prompt routing tool: combined the source material with the system prompt and report prompt.
+
+5. Reasoning tool: directed the model to identify significance, patterns, risks, confidence, and follow up questions.
+
+6. Report generation tool: created one structured situational awareness report.
+
+7. Memory tool: stored the latest report in the current Streamlit session.
+
+8. Feedback tool: allows the user to save feedback for evaluation and later improvement.
+"""
+
+
 def save_report(report_text: str) -> str:
     """
     Saves the latest report as a markdown file in the outputs folder.
+    This function acts as the report saving tool.
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     file_path = OUTPUTS_DIR / f"trendlens_report_{timestamp}.md"
@@ -223,6 +207,7 @@ def save_report(report_text: str) -> str:
 def save_feedback(feedback: str, notes: str = "") -> str:
     """
     Saves basic user feedback for evaluation and future improvement.
+    This function acts as the feedback logging tool.
     """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     feedback_path = OUTPUTS_DIR / "feedback_log.csv"
