@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
+from PIL import Image
 
 from trend_tools import generate_trendlens_report, save_feedback, save_report
 
@@ -24,11 +25,17 @@ except Exception as error:
 APP_NAME = "TrendLens AI"
 OUTPUTS_DIR = Path("Outputs")
 MONITORING_DIR = Path("Monitoring")
+ASSETS_DIR = Path("assets")
 
+ICON_PATH = ASSETS_DIR / "trendlens-icon.png"
+BANNER_PATH = ASSETS_DIR / "trendlens-banner.png"
+
+page_icon = Image.open(ICON_PATH) if ICON_PATH.exists() else "🔎"
+banner = Image.open(BANNER_PATH) if BANNER_PATH.exists() else None
 
 st.set_page_config(
     page_title="TrendLens AI",
-    page_icon="📊",
+    page_icon=page_icon,
     layout="wide",
 )
 
@@ -504,9 +511,11 @@ initialize_session_state()
 ensure_project_folders()
 
 
-st.title("TrendLens AI")
-st.caption("Agentic public event analysis and situational awareness reporting assistant")
-
+if BANNER_PATH.exists():
+    st.image(str(BANNER_PATH), use_container_width=True)
+else:
+    st.title("TrendLens AI")
+    st.caption("Agentic public event analysis and situational awareness reporting assistant")
 st.markdown(
     """
 TrendLens AI helps transform multiple public information sources into one structured situational awareness product.
