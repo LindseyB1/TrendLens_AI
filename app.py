@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from trend_tools import generate_trendlens_report, save_feedback, save_report
 
@@ -23,6 +23,7 @@ except Exception as error:
 
 
 APP_NAME = "TrendLens AI"
+
 OUTPUTS_DIR = Path("Outputs")
 MONITORING_DIR = Path("Monitoring")
 ASSETS_DIR = Path("assets")
@@ -30,8 +31,28 @@ ASSETS_DIR = Path("assets")
 ICON_PATH = ASSETS_DIR / "trendlens-icon.png"
 BANNER_PATH = ASSETS_DIR / "trendlens-banner.png"
 
-page_icon = Image.open(ICON_PATH) if ICON_PATH.exists() else "🔎"
-banner = Image.open(BANNER_PATH) if BANNER_PATH.exists() else None
+
+def safe_load_image(image_path):
+    """
+    Safely loads an image file.
+
+    This prevents the Streamlit app from crashing if an image exists but is empty,
+    corrupted, or not a real PNG file.
+    """
+    try:
+        if image_path.exists() and image_path.stat().st_size > 0:
+            return Image.open(image_path)
+    except (UnidentifiedImageError, OSError, ValueError):
+        return None
+
+    return None
+
+
+page_icon_image = safe_load_image(ICON_PATH)
+banner_image = safe_load_image(BANNER_PATH)
+
+page_icon = page_icon_image if page_icon_image is not None else "🔎"
+
 
 st.set_page_config(
     page_title="TrendLens AI",
@@ -69,17 +90,7 @@ def initialize_session_state():
 def ensure_project_folders():
     OUTPUTS_DIR.mkdir(exist_ok=True)
     MONITORING_DIR.mkdir(exist_ok=True)
-
-
-def count_valid_sources(sources):
-    valid_sources = []
-
-    for source in sources:
-        source_text = source.get("text", "").strip()
-        if source_text:
-            valid_sources.append(source)
-
-    return valid_sources
+    ASSETS_DIR.mkdir(exist_ok=True)
 
 
 def route_model_behavior(target_audience, task_type):
@@ -244,11 +255,36 @@ def call_save_feedback(feedback_text, rating, metadata):
     return save_feedback(feedback_text)
 
 
+def render_header():
+    if banner_image is not None:
+        st.image(banner_image, use_container_width=True)
+    else:
+        header_left, header_right = st.columns([1, 8])
+
+        with header_left:
+            if page_icon_image is not None:
+                st.image(page_icon_image, width=90)
+            else:
+                st.markdown("## 🔎")
+
+        with header_right:
+            st.title("TrendLens AI")
+            st.caption("Agentic public event analysis and situational awareness reporting assistant")
+
+    st.markdown(
+        """
+TrendLens AI helps transform multiple public information sources into one structured situational awareness product.
+
+For this working draft, paste two or three public article excerpts, alerts, reports, updates, or event descriptions. The system compares the sources and generates an analyst style report with source overview, Bottom Line Up Front, executive summary, confidence assessment, source comparison, and follow up questions.
+"""
+    )
+
+
 def render_agent_workflow_panel(valid_source_count, selected_sections, model_route):
     with st.expander("Agent workflow preview", expanded=True):
         st.markdown(
             """
-This panel shows how the application is behaving like an agentic workflow instead of a basic chat box.
+This panel shows how the application behaves like an agentic workflow instead of a basic chat box.
 """
         )
 
@@ -356,180 +392,7 @@ def render_report_section_selector():
     return selected_sections
 
 
-def render_monitoring_tab():
-    st.header("Semi Automated Monitoring")
-
-    st.markdown(
-        """
-This section supports the planned monitoring workflow for Project 2. The goal is to let a user track a public topic and check for updates every five hours.
-"""
-    )
-
-    st.info(
-        "For the working draft, monitoring is semi automated. The user still controls the topic, reviews changes, and validates the final report."
-    )
-
-    if not MONITORING_AVAILABLE:
-        st.warning(
-            "Monitoring tools are not loaded yet. This is expected until monitoring.py is created in the next step."
-        )
-
-        if MONITORING_IMPORT_ERROR:
-            st.caption(f"Current monitoring import message: {MONITORING_IMPORT_ERROR}")
-
-        return
-
-    with st.form("monitoring_topic_form"):
-        topic_name = st.text_input(
-            "Monitoring topic or event",
-            placeholder="Example: chemical spill in a specific city, severe weather event, public safety incident",
-        )
-
-        topic_description = st.text_area(
-            "Monitoring purpose",
-            placeholder="Describe what updates should matter for this topic.",
-            height=120,
-        )
-
-        source_url = st.text_input(
-            "Primary public source URL",
-            placeholder="Optional public website or source link",
-        )
-
-        check_interval_hours = st.number_input(
-            "Update check interval in hours",
-            min_value=1,
-            max_value=24,
-            value=5,
-            step=1,
-        )
-
-        submit_monitoring_topic = st.form_submit_button("Save Monitoring Topic")
-
-    if submit_monitoring_topic:
-        if not topic_name.strip():
-            st.error("Enter a monitoring topic before saving.")
-        else:
-            topic_data = {
-                "topic_name": topic_name.strip(),
-                "topic_description": topic_description.strip(),
-                "source_url": source_url.strip(),
-                "check_interval_hours": check_interval_hours,
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            }
-
-            saved_path = save_monitored_topic(topic_data)
-            st.success("Monitoring topic saved.")
-            st.write(f"Saved to: {saved_path}")
-
-    st.divider()
-
-    st.subheader("Manual Change Detection Test")
-
-    st.markdown(
-        """
-Use this test to prove the monitoring logic can compare older source text against updated source text.
-"""
-    )
-
-    previous_text = st.text_area(
-        "Previous source text",
-        height=180,
-        key="previous_monitoring_text",
-    )
-
-    updated_text = st.text_area(
-        "Updated source text",
-        height=180,
-        key="updated_monitoring_text",
-    )
-
-    if st.button("Compare Source Text"):
-        if not previous_text.strip() or not updated_text.strip():
-            st.error("Paste both previous text and updated text before comparing.")
-        else:
-            change_result = compare_source_changes(previous_text, updated_text)
-
-            st.subheader("Change Detection Result")
-
-            if isinstance(change_result, dict):
-                st.json(change_result)
-            else:
-                st.write(change_result)
-
-    st.divider()
-
-    st.subheader("Saved Monitoring Topics")
-
-    try:
-        topics = load_monitored_topics()
-
-        if not topics:
-            st.write("No monitoring topics saved yet.")
-        else:
-            st.json(topics)
-
-    except Exception as error:
-        st.error(f"Could not load monitoring topics: {error}")
-
-
-def render_about_tab():
-    st.header("About TrendLens AI")
-
-    st.markdown(
-        """
-TrendLens AI is a classroom Project 2 working draft focused on agentic AI systems.
-
-The application is designed to demonstrate:
-
-1. Reasoning based event categorization.
-2. Structured reporting workflows.
-3. Trend and pattern analysis.
-4. Contextual memory.
-5. Adaptive output generation.
-6. Analyst style briefing products.
-7. Tool based actions.
-8. Feedback logging.
-9. Semi automated monitoring.
-10. Model routing.
-11. Model Context Protocol style architecture.
-
-The primary audience is the intelligence analyst. Secondary audiences include emergency responders and the public.
-"""
-    )
-
-    st.subheader("Data Safety Notice")
-
-    st.warning(
-        """
-Only use public or synthetic information. Do not enter classified, private, restricted, protected, or sensitive information.
-"""
-    )
-
-
-initialize_session_state()
-ensure_project_folders()
-
-
-if BANNER_PATH.exists():
-    st.image(str(BANNER_PATH), use_container_width=True)
-else:
-    st.title("TrendLens AI")
-    st.caption("Agentic public event analysis and situational awareness reporting assistant")
-st.markdown(
-    """
-TrendLens AI helps transform multiple public information sources into one structured situational awareness product.
-
-For this working draft, paste two or three public article excerpts, alerts, reports, updates, or event descriptions. The system compares the sources and generates an analyst style report with source overview, Bottom Line Up Front, executive summary, confidence assessment, source comparison, and follow up questions.
-"""
-)
-
-main_tab, monitoring_tab, about_tab = st.tabs(
-    ["Generate Report", "Monitoring Workflow", "About"]
-)
-
-
-with main_tab:
+def render_generate_report_tab():
     st.header("1. Define User Role and Report Purpose")
 
     left_column, right_column = st.columns(2)
@@ -747,8 +610,369 @@ with main_tab:
                     st.exception(error)
 
 
+def render_monitoring_tab():
+    st.header("Semi Automated Monitoring")
+
+    st.markdown(
+        """
+This section supports the planned monitoring workflow for Project 2. The goal is to let a user track a public topic and check for updates on a user selected interval.
+"""
+    )
+
+    st.info(
+        "For the working draft, monitoring is semi automated. The user still controls the topic, reviews changes, and validates the final report."
+    )
+
+    if not MONITORING_AVAILABLE:
+        st.warning(
+            "Monitoring tools are not loaded yet. Confirm monitoring.py exists in the project folder."
+        )
+
+        if MONITORING_IMPORT_ERROR:
+            st.caption(f"Current monitoring import message: {MONITORING_IMPORT_ERROR}")
+
+        return
+
+    with st.form("monitoring_topic_form"):
+        topic_name = st.text_input(
+            "Monitoring topic or event",
+            placeholder="Example: chemical spill in a specific city, severe weather event, public safety incident",
+        )
+
+        topic_description = st.text_area(
+            "Monitoring purpose",
+            placeholder="Describe what updates should matter for this topic.",
+            height=120,
+        )
+
+        source_url = st.text_input(
+            "Primary public source URL",
+            placeholder="Optional public website or source link",
+        )
+
+        check_frequency_label = st.selectbox(
+            "How often should the agent check for updates?",
+            [
+                "5 minutes",
+                "15 minutes",
+                "30 minutes",
+                "1 hour",
+                "2 hours",
+                "4 hours",
+                "5 hours",
+                "12 hours",
+                "24 hours",
+            ],
+            index=6,
+        )
+
+        check_frequency_map = {
+            "5 minutes": 5,
+            "15 minutes": 15,
+            "30 minutes": 30,
+            "1 hour": 60,
+            "2 hours": 120,
+            "4 hours": 240,
+            "5 hours": 300,
+            "12 hours": 720,
+            "24 hours": 1440,
+        }
+
+        check_interval_minutes = check_frequency_map[check_frequency_label]
+
+        submit_monitoring_topic = st.form_submit_button("Save Monitoring Topic")
+
+    if submit_monitoring_topic:
+        if not topic_name.strip():
+            st.error("Enter a monitoring topic before saving.")
+        else:
+            topic_data = {
+                "topic_name": topic_name.strip(),
+                "topic_description": topic_description.strip(),
+                "source_url": source_url.strip(),
+                "check_interval_minutes": check_interval_minutes,
+                "check_frequency_label": check_frequency_label,
+                "check_interval_hours": max(1, round(check_interval_minutes / 60)),
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+
+            saved_path = save_monitored_topic(topic_data)
+            st.success("Monitoring topic saved.")
+            st.write(f"Saved to: {saved_path}")
+
+    st.divider()
+
+    st.subheader("Manual Change Detection Test")
+
+    st.markdown(
+        """
+Use this test to prove the monitoring logic can compare older source text against updated source text.
+"""
+    )
+
+    previous_text = st.text_area(
+        "Previous source text",
+        height=180,
+        key="previous_monitoring_text",
+        placeholder="Paste the older or baseline version of the source text here.",
+    )
+
+    updated_text = st.text_area(
+        "Updated source text",
+        height=180,
+        key="updated_monitoring_text",
+        placeholder="Paste the newer version of the source text here.",
+    )
+
+    if st.button("Compare Source Text"):
+        if not previous_text.strip() or not updated_text.strip():
+            st.error("Paste both previous text and updated text before comparing.")
+        else:
+            change_result = compare_source_changes(previous_text, updated_text)
+
+            st.subheader("Change Detection Result")
+
+            if isinstance(change_result, dict):
+                summary_col_1, summary_col_2, summary_col_3 = st.columns(3)
+
+                with summary_col_1:
+                    st.metric("Changed", str(change_result.get("changed", False)))
+
+                with summary_col_2:
+                    st.metric(
+                        "Meaningful Change",
+                        str(change_result.get("meaningful_change", False)),
+                    )
+
+                with summary_col_3:
+                    st.metric(
+                        "Similarity Score",
+                        change_result.get("similarity_score", "N/A"),
+                    )
+
+                st.write(change_result.get("change_summary", ""))
+
+                line_changes = change_result.get("line_changes", {})
+
+                with st.expander("Added lines"):
+                    added_lines = line_changes.get("added_lines", [])
+
+                    if added_lines:
+                        for line in added_lines:
+                            st.write(f"• {line}")
+                    else:
+                        st.write("No added lines detected.")
+
+                with st.expander("Removed lines"):
+                    removed_lines = line_changes.get("removed_lines", [])
+
+                    if removed_lines:
+                        for line in removed_lines:
+                            st.write(f"• {line}")
+                    else:
+                        st.write("No removed lines detected.")
+
+                with st.expander("Full JSON result"):
+                    st.json(change_result)
+            else:
+                st.write(change_result)
+
+    st.divider()
+
+    st.subheader("Saved Monitoring Topics")
+
+    try:
+        topics = load_monitored_topics()
+
+        if not topics:
+            st.write("No monitoring topics saved yet.")
+        else:
+            st.json(topics)
+
+    except Exception as error:
+        st.error(f"Could not load monitoring topics: {error}")
+
+
+def render_report_library_tab():
+    st.header("Report Library")
+
+    st.info(
+        "Coming soon: this tab will show saved reports, searchable report history, and downloadable outputs."
+    )
+
+    st.subheader("Planned Features")
+
+    st.markdown(
+        """
+1. Saved report history.
+2. Searchable prior reports.
+3. Download previous reports.
+4. Filter reports by audience, task type, date, or confidence level.
+5. Compare current reports against earlier reports.
+"""
+    )
+
+    st.subheader("Current Working Draft Note")
+
+    st.write(
+        "Reports can currently be saved from the Generate Report tab and downloaded as Markdown files."
+    )
+
+
+def render_alert_center_tab():
+    st.header("Alert Center")
+
+    st.info(
+        "Coming soon: this tab will show meaningful change alerts, monitoring topic status, and future notification settings."
+    )
+
+    st.subheader("Planned Features")
+
+    st.markdown(
+        """
+1. Meaningful change alerts.
+2. Monitoring topic status.
+3. Last checked timestamps.
+4. Email alert settings.
+5. Notification history.
+6. Human review queue for updated reports.
+"""
+    )
+
+    st.subheader("Current Working Draft Note")
+
+    st.write(
+        "The current app supports manual old versus new source comparison in the Monitoring Workflow tab. Full email alerts would require persistent storage and an external background worker."
+    )
+
+
+def render_analytics_tab():
+    st.header("Analytics")
+
+    st.info(
+        "Coming soon: this tab will visualize reporting trends, source patterns, and monitoring activity."
+    )
+
+    st.subheader("Planned Features")
+
+    st.markdown(
+        """
+1. Source type breakdown.
+2. Report generation totals.
+3. Confidence level trends.
+4. Monitoring activity trends.
+5. Event category summaries.
+6. Common Request for Information themes.
+"""
+    )
+
+    st.subheader("Current Working Draft Note")
+
+    st.write(
+        "This placeholder shows the future analytics direction while keeping the current draft focused on source intake, report generation, feedback, and monitoring."
+    )
+
+
+def render_about_tab():
+    st.header("About TrendLens AI")
+
+    st.markdown(
+        """
+TrendLens AI is a classroom Project 2 working draft focused on agentic AI systems.
+
+The application is designed to demonstrate:
+
+1. Reasoning based event categorization.
+2. Structured reporting workflows.
+3. Trend and pattern analysis.
+4. Contextual memory.
+5. Adaptive output generation.
+6. Analyst style briefing products.
+7. Tool based actions.
+8. Feedback logging.
+9. Semi automated monitoring.
+10. Model routing.
+11. Model Context Protocol style architecture.
+
+The primary audience is the intelligence analyst. Secondary audiences include emergency responders and the public.
+"""
+    )
+
+    st.subheader("How the Agentic Workflow Works")
+
+    st.graphviz_chart(
+        """
+        digraph {
+            rankdir=LR;
+
+            user_input [label="User enters public sources"];
+            validation [label="Source intake and validation"];
+            routing [label="Model routing"];
+            report_tool [label="Report generation tool"];
+            report_output [label="Structured report"];
+            save_report [label="Save report"];
+            feedback [label="Save feedback"];
+            monitoring [label="Monitoring workflow"];
+            change_detection [label="Old vs new source comparison"];
+            updated_report [label="Updated report for review"];
+
+            user_input -> validation;
+            validation -> routing;
+            routing -> report_tool;
+            report_tool -> report_output;
+            report_output -> save_report;
+            report_output -> feedback;
+            validation -> monitoring;
+            monitoring -> change_detection;
+            change_detection -> updated_report;
+        }
+        """
+    )
+
+    st.subheader("Data Safety Notice")
+
+    st.warning(
+        """
+Only use public or synthetic information. Do not enter classified, private, restricted, protected, or sensitive information.
+"""
+    )
+
+
+initialize_session_state()
+ensure_project_folders()
+render_header()
+
+
+main_tab, monitoring_tab, report_library_tab, alert_center_tab, analytics_tab, about_tab = st.tabs(
+    [
+        "Generate Report",
+        "Monitoring Workflow",
+        "Report Library",
+        "Alert Center",
+        "Analytics",
+        "About",
+    ]
+)
+
+
+with main_tab:
+    render_generate_report_tab()
+
+
 with monitoring_tab:
     render_monitoring_tab()
+
+
+with report_library_tab:
+    render_report_library_tab()
+
+
+with alert_center_tab:
+    render_alert_center_tab()
+
+
+with analytics_tab:
+    render_analytics_tab()
 
 
 with about_tab:
