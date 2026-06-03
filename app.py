@@ -1,11 +1,25 @@
 import json
+import os
+import re
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
 from PIL import Image, UnidentifiedImageError
 
-from trend_tools import generate_trendlens_report, save_feedback, save_report
+from trend_tools import save_feedback, save_report
+
+
+try:
+    from openai import OpenAI
+
+    OPENAI_AVAILABLE = True
+    OPENAI_IMPORT_ERROR = ""
+except Exception as error:
+    OpenAI = None
+    OPENAI_AVAILABLE = False
+    OPENAI_IMPORT_ERROR = str(error)
 
 
 try:
@@ -27,17 +41,78 @@ APP_NAME = "TrendLens AI"
 OUTPUTS_DIR = Path("Outputs")
 MONITORING_DIR = Path("Monitoring")
 ASSETS_DIR = Path("assets")
+TESTS_DIR = Path("Tests")
 
 ICON_PATH = ASSETS_DIR / "trendlens-icon.png"
 BANNER_PATH = ASSETS_DIR / "trendlens-banner.png"
 
+DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+
+ANALYZE_PUBLIC_SOURCES_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "analyze_public_sources",
+        "description": (
+            "Analyze user provided public source text before the final situational "
+            "awareness report is written. Compare sources, identify source supported "
+            "facts, possible conflicts, information gaps, confidence level, and possible "
+            "second and third order effects."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "sources": {
+                    "type": "array",
+                    "description": "Public source records pasted by the user.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "source_number": {"type": "integer"},
+                            "type": {"type": "string"},
+                            "label": {"type": "string"},
+                            "url": {"type": "string"},
+                            "text": {"type": "string"},
+                        },
+                        "required": ["source_number", "type", "label", "text"],
+                        "additionalProperties": True,
+                    },
+                },
+                "target_audience": {
+                    "type": "string",
+                    "description": "Audience selected by the user.",
+                },
+                "report_purpose": {
+                    "type": "string",
+                    "description": "Purpose of the report entered by the user.",
+                },
+                "task_type": {
+                    "type": "string",
+                    "description": "Task type selected by the user.",
+                },
+                "selected_sections": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Report sections selected by the user.",
+                },
+            },
+            "required": [
+                "sources",
+                "target_audience",
+                "report_purpose",
+                "task_type",
+                "selected_sections",
+            ],
+            "additionalProperties": False,
+        },
+    },
+}
+
 
 def safe_load_image(image_path):
     """
-    Safely loads an image file.
-
-    This prevents the Streamlit app from crashing if an image exists but is empty,
-    corrupted, or not a real PNG file.
+    Safely loads an image file so the app does not crash if an asset is missing,
+    empty, corrupted, or not a real image file.
     """
     try:
         if image_path.exists() and image_path.stat().st_size > 0:
@@ -71,8 +146,17 @@ def initialize_session_state():
     if "latest_metadata" not in st.session_state:
         st.session_state.latest_metadata = {}
 
+    if "latest_tool_trace" not in st.session_state:
+        st.session_state.latest_tool_trace = {}
+
+    if "latest_generation_mode" not in st.session_state:
+        st.session_state.latest_generation_mode = ""
+
     if "feedback_saved" not in st.session_state:
         st.session_state.feedback_saved = False
+
+    if "eval_saved" not in st.session_state:
+        st.session_state.eval_saved = False
 
     if "selected_sections" not in st.session_state:
         st.session_state.selected_sections = [
@@ -91,31 +175,106 @@ def ensure_project_folders():
     OUTPUTS_DIR.mkdir(exist_ok=True)
     MONITORING_DIR.mkdir(exist_ok=True)
     ASSETS_DIR.mkdir(exist_ok=True)
+    TESTS_DIR.mkdir(exist_ok=True)
 
 
-def route_model_behavior(target_audience, task_type):
+def get_openai_api_key():
+    """
+    Reads the OpenAI API key from Streamlit secrets first, then from the local
+    environment. Never hard code the API key in app.py.
+    """
+    try:
+        api_key = st.secrets.get("OPENAI_API_KEY", "")
+        if api_key:
+            return api_key
+    except Exception:
+        pass
+
+    return os.getenv("OPENAI_API_KEY", "")
+
+
+def get_openai_client():
+    if not OPENAI_AVAILABLE:
+        raise RuntimeError(
+            f"The openai package is not available. Install it with: pip install openai. Details: {OPENAI_IMPORT_ERROR}"
+        )
+
+    api_key = get_openai_api_key()
+
+    if not api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY is missing. Add it to Streamlit secrets or set it as a local environment variable."
+        )
+
+    return OpenAI(api_key=api_key)
+
+
+def route_prompt_behavior(target_audience, task_type):
+    """
+    This is prompt based routing, not multi model routing.
+
+    The instructor feedback said the previous version routed different prompts
+    to the same model. This version labels that honestly. The app uses one
+    model and changes the route instructions by audience and task. A future
+    version can add true multi model routing by selecting different model names.
+    """
     audience = target_audience.lower()
     task = task_type.lower()
 
     if "monitor" in task or "update" in task:
-        return "Monitoring Update Route"
+        return {
+            "route_name": "Prompt Route: Monitoring Update",
+            "route_explanation": (
+                "Uses the same model with monitoring focused instructions for change detection and update reporting."
+            ),
+        }
 
     if "intelligence" in audience:
-        return "Intelligence Analyst Route"
+        return {
+            "route_name": "Prompt Route: Intelligence Analyst",
+            "route_explanation": (
+                "Uses the same model with intelligence style instructions for source comparison, confidence, RFIs, and operational relevance."
+            ),
+        }
 
     if "emergency" in audience:
-        return "Emergency Responder Route"
+        return {
+            "route_name": "Prompt Route: Emergency Response",
+            "route_explanation": (
+                "Uses the same model with public safety and responder impact instructions."
+            ),
+        }
 
     if "public" in audience:
-        return "Public Audience Route"
+        return {
+            "route_name": "Prompt Route: Public Audience",
+            "route_explanation": (
+                "Uses the same model with plain language instructions for a general public audience."
+            ),
+        }
 
-    if "journalist" in audience:
-        return "Journalist / Research Route"
+    if "journalist" in audience or "researcher" in audience:
+        return {
+            "route_name": "Prompt Route: Research and Journalism",
+            "route_explanation": (
+                "Uses the same model with source comparison and attribution focused instructions."
+            ),
+        }
 
     if "security" in audience:
-        return "Security Professional Route"
+        return {
+            "route_name": "Prompt Route: Security Professional",
+            "route_explanation": (
+                "Uses the same model with risk, impact, and security relevance instructions."
+            ),
+        }
 
-    return "General Situational Awareness Route"
+    return {
+        "route_name": "Prompt Route: General Situational Awareness",
+        "route_explanation": (
+            "Uses the same model with general situational awareness instructions."
+        ),
+    }
 
 
 def build_source_payload(source_1, source_2, source_3):
@@ -145,7 +304,7 @@ def build_metadata(
     output_depth,
     selected_sections,
     sources,
-    model_route,
+    prompt_route,
 ):
     return {
         "app_name": APP_NAME,
@@ -156,11 +315,286 @@ def build_metadata(
         "output_depth": output_depth,
         "selected_sections": selected_sections,
         "valid_source_count": len(sources),
-        "model_route": model_route,
+        "routing_type": "prompt based routing",
+        "prompt_route": prompt_route.get("route_name", ""),
+        "route_explanation": prompt_route.get("route_explanation", ""),
+        "model_name": DEFAULT_MODEL,
     }
 
 
-def call_report_generator(
+def clean_text(text):
+    return re.sub(r"\s+", " ", str(text or "")).strip()
+
+
+def extract_keywords(text, limit=12):
+    stop_words = {
+        "about",
+        "after",
+        "again",
+        "also",
+        "and",
+        "are",
+        "because",
+        "been",
+        "before",
+        "being",
+        "could",
+        "during",
+        "each",
+        "from",
+        "have",
+        "into",
+        "more",
+        "most",
+        "not",
+        "only",
+        "other",
+        "over",
+        "public",
+        "said",
+        "same",
+        "source",
+        "that",
+        "the",
+        "their",
+        "there",
+        "these",
+        "they",
+        "this",
+        "through",
+        "under",
+        "updated",
+        "were",
+        "what",
+        "when",
+        "where",
+        "which",
+        "while",
+        "with",
+        "would",
+    }
+
+    words = re.findall(r"\b[A-Za-z][A-Za-z0-9]{3,}\b", text.lower())
+    filtered_words = [word for word in words if word not in stop_words]
+
+    return [word for word, _count in Counter(filtered_words).most_common(limit)]
+
+
+def summarize_source(source):
+    source_text = clean_text(source.get("text", ""))
+    words = source_text.split()
+
+    if not words:
+        return "No usable source text provided."
+
+    preview = " ".join(words[:55])
+
+    if len(words) > 55:
+        preview += "..."
+
+    return preview
+
+
+def find_possible_review_flags(sources):
+    """
+    Flags items that should be checked by a human reviewer. This does not claim
+    that a conflict exists. It identifies details that may need verification.
+    """
+    numbers_by_source = {}
+    dates_by_source = {}
+    locations_by_source = {}
+
+    location_pattern = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}\b")
+
+    excluded_locations = {
+        "The",
+        "This",
+        "That",
+        "Source",
+        "Public",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    }
+
+    for source in sources:
+        label = source.get("label", f"Source {source.get('source_number', '')}")
+        text = clean_text(source.get("text", ""))
+
+        numbers = sorted(set(re.findall(r"\b\d{1,4}\b", text)))
+        dates = sorted(
+            set(
+                re.findall(
+                    r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}/\d{1,2}/\d{2,4}\b",
+                    text,
+                    flags=re.IGNORECASE,
+                )
+            )
+        )
+        locations = sorted(
+            {
+                match.group(0)
+                for match in location_pattern.finditer(text)
+                if match.group(0) not in excluded_locations
+            }
+        )
+
+        if numbers:
+            numbers_by_source[label] = numbers[:12]
+
+        if dates:
+            dates_by_source[label] = dates[:12]
+
+        if locations:
+            locations_by_source[label] = locations[:12]
+
+    review_flags = []
+
+    if len(numbers_by_source) > 1:
+        review_flags.append(
+            "Multiple sources contain numeric details. Review counts, times, quantities, distances, or costs for consistency."
+        )
+
+    if len(dates_by_source) > 1:
+        review_flags.append(
+            "Multiple sources contain date or time details. Review the timeline for consistency."
+        )
+
+    if len(locations_by_source) > 1:
+        review_flags.append(
+            "Multiple sources contain location references. Review whether locations refer to the same event area or different impact areas."
+        )
+
+    if not review_flags:
+        review_flags.append(
+            "No obvious numeric, date, or location review flag was detected. Human review is still required."
+        )
+
+    return {
+        "review_flags": review_flags,
+        "numbers_by_source": numbers_by_source,
+        "dates_by_source": dates_by_source,
+        "locations_by_source": locations_by_source,
+    }
+
+
+def estimate_confidence(source_count):
+    if source_count >= 3:
+        return "Moderate"
+
+    if source_count == 2:
+        return "Low to moderate"
+
+    return "Low"
+
+
+def analyze_public_sources(
+    sources,
+    target_audience,
+    report_purpose,
+    task_type,
+    selected_sections,
+):
+    """
+    Real model callable application tool.
+
+    The model receives a function schema for this tool. The model must request
+    this function before the final report is written. The app executes this
+    local Python function only after the model requests it.
+    """
+    usable_sources = []
+
+    for source in sources:
+        source_text = clean_text(source.get("text", ""))
+
+        if not source_text:
+            continue
+
+        usable_sources.append(
+            {
+                "source_number": int(source.get("source_number", len(usable_sources) + 1)),
+                "type": source.get("type", "Not specified"),
+                "label": source.get("label", f"Source {len(usable_sources) + 1}"),
+                "url": source.get("url", ""),
+                "text": source_text,
+            }
+        )
+
+    combined_text = " ".join(source["text"] for source in usable_sources)
+    overall_keywords = extract_keywords(combined_text, limit=18)
+
+    keyword_sets = [
+        set(extract_keywords(source["text"], limit=20))
+        for source in usable_sources
+    ]
+
+    if len(keyword_sets) >= 2:
+        shared_keywords = sorted(set.intersection(*keyword_sets))[:12]
+    elif keyword_sets:
+        shared_keywords = sorted(keyword_sets[0])[:12]
+    else:
+        shared_keywords = []
+
+    review_flags = find_possible_review_flags(usable_sources)
+    confidence_level = estimate_confidence(len(usable_sources))
+
+    source_previews = []
+
+    for source in usable_sources:
+        source_previews.append(
+            {
+                "source_number": source["source_number"],
+                "type": source["type"],
+                "label": source["label"],
+                "url_present": bool(source.get("url")),
+                "preview": summarize_source(source),
+                "top_keywords": extract_keywords(source["text"], limit=8),
+            }
+        )
+
+    likely_topic = "Public event requiring source comparison"
+
+    if overall_keywords:
+        likely_topic = "Public event involving " + ", ".join(overall_keywords[:6])
+
+    return {
+        "tool_name": "analyze_public_sources",
+        "tool_executed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "source_count": len(usable_sources),
+        "target_audience": target_audience,
+        "report_purpose": report_purpose,
+        "task_type": task_type,
+        "selected_sections": selected_sections,
+        "likely_topic": likely_topic,
+        "source_previews": source_previews,
+        "overall_keywords": overall_keywords,
+        "shared_keywords": shared_keywords,
+        "possible_conflicts_or_review_flags": review_flags,
+        "information_gaps": [
+            "Most current official confirmation.",
+            "Exact timeline of what changed and when.",
+            "Clarification of any conflicting counts, locations, or impact claims.",
+            "Clear source attribution for key claims used in the final report.",
+            "Updated public safety, operational, or community guidance if the event is still developing.",
+        ],
+        "possible_second_and_third_order_effects": [
+            "Immediate effects may include public communication needs, resource coordination, or local operational disruption.",
+            "Second order effects may include route changes, delayed services, resource strain, stakeholder concern, or increased reporting requirements.",
+            "Third order effects may include policy review, reputational impact, supply chain concern, recovery planning, or long term community confidence issues.",
+        ],
+        "confidence_level": confidence_level,
+        "analysis_limits": (
+            "This tool only analyzes user pasted public or synthetic source text. "
+            "It does not browse the web or independently verify facts."
+        ),
+    }
+
+
+def build_tool_workflow_messages(
     sources,
     target_audience,
     report_purpose,
@@ -168,54 +602,187 @@ def call_report_generator(
     custom_instructions,
     task_type,
     output_depth,
-    model_route,
+    prompt_route,
 ):
-    try:
-        return generate_trendlens_report(
-            sources=sources,
-            target_audience=target_audience,
-            report_purpose=report_purpose,
-            selected_sections=selected_sections,
-            custom_instructions=custom_instructions,
-            task_type=task_type,
-            output_depth=output_depth,
-            model_route=model_route,
-        )
-    except TypeError:
-        pass
+    source_package = {
+        "sources": sources,
+        "target_audience": target_audience,
+        "report_purpose": report_purpose,
+        "task_type": task_type,
+        "selected_sections": selected_sections,
+    }
 
-    try:
-        return generate_trendlens_report(
-            target_audience,
-            report_purpose,
-            selected_sections,
-            custom_instructions,
-            sources,
-        )
-    except TypeError:
-        pass
+    system_message = """
+You are TrendLens AI, an agentic public event analysis assistant.
 
-    combined_sources = ""
-
-    for source in sources:
-        combined_sources += f"""
-Source {source.get("source_number")}
-Type: {source.get("type")}
-Label: {source.get("label")}
-URL: {source.get("url")}
-
-Text:
-{source.get("text")}
-
+Required workflow:
+1. Call the analyze_public_sources function before writing the final report.
+2. Use the tool result as the grounding layer for source comparison, confidence, information gaps, and second and third order effects.
+3. Do not claim that you verified facts outside the user provided source text.
+4. Separate source supported details from possible implications.
+5. Keep the tone appropriate for the selected audience.
+6. Use only public or synthetic information.
+7. Do not include classified, private, restricted, protected, or sensitive information.
 """
 
-    return generate_trendlens_report(
-        combined_sources,
-        target_audience,
-        report_purpose,
-        selected_sections,
-        custom_instructions,
+    user_message = f"""
+Create a structured situational awareness report.
+
+Target audience:
+{target_audience}
+
+Report purpose:
+{report_purpose}
+
+Task type:
+{task_type}
+
+Output depth:
+{output_depth}
+
+Routing type:
+Prompt based routing. This project intentionally uses one model and changes the instruction path by audience and task.
+
+Prompt route:
+{prompt_route.get("route_name", "")}
+
+Route explanation:
+{prompt_route.get("route_explanation", "")}
+
+Selected report sections:
+{", ".join(selected_sections)}
+
+Optional custom instructions:
+{custom_instructions if custom_instructions.strip() else "None provided."}
+
+Public source package:
+{json.dumps(source_package, indent=2)}
+
+After the function tool returns its result, write the final report using the selected sections.
+"""
+
+    return [
+        {"role": "system", "content": system_message.strip()},
+        {"role": "user", "content": user_message.strip()},
+    ]
+
+
+def run_model_tool_workflow(
+    sources,
+    target_audience,
+    report_purpose,
+    selected_sections,
+    custom_instructions,
+    task_type,
+    output_depth,
+    prompt_route,
+):
+    """
+    Strict model callable tool workflow.
+
+    This function is the main report generation path. It does not call the old
+    report generator. It requires the model to call analyze_public_sources first.
+    """
+    client = get_openai_client()
+    model_name = DEFAULT_MODEL
+
+    messages = build_tool_workflow_messages(
+        sources=sources,
+        target_audience=target_audience,
+        report_purpose=report_purpose,
+        selected_sections=selected_sections,
+        custom_instructions=custom_instructions,
+        task_type=task_type,
+        output_depth=output_depth,
+        prompt_route=prompt_route,
     )
+
+    first_response = client.chat.completions.create(
+        model=model_name,
+        messages=messages,
+        tools=[ANALYZE_PUBLIC_SOURCES_TOOL],
+        tool_choice={
+            "type": "function",
+            "function": {"name": "analyze_public_sources"},
+        },
+        temperature=0.2,
+    )
+
+    first_message = first_response.choices[0].message
+    tool_calls = first_message.tool_calls or []
+
+    if not tool_calls:
+        raise RuntimeError(
+            "The model did not request analyze_public_sources. The report was not generated because real model tool use is required."
+        )
+
+    messages.append(first_message.model_dump(exclude_none=True))
+
+    tool_trace = {
+        "generation_mode": "model callable tool workflow",
+        "model_name": model_name,
+        "routing_type": "prompt based routing",
+        "prompt_route": prompt_route.get("route_name", ""),
+        "tool_requested_by_model": False,
+        "tool_name": "",
+        "tool_result_summary": {},
+        "workflow_steps": [
+            "The app provided a function schema to the model.",
+            "The model requested analyze_public_sources.",
+            "The app executed the Python function after the model requested it.",
+            "The app returned the tool result to the model.",
+            "The model generated the final report after receiving the tool result.",
+        ],
+    }
+
+    for tool_call in tool_calls:
+        tool_name = tool_call.function.name
+
+        if tool_name != "analyze_public_sources":
+            raise RuntimeError(f"Unexpected tool requested by model: {tool_name}")
+
+        try:
+            arguments = json.loads(tool_call.function.arguments or "{}")
+        except json.JSONDecodeError:
+            arguments = {}
+
+        tool_result = analyze_public_sources(
+            sources=arguments.get("sources", sources),
+            target_audience=arguments.get("target_audience", target_audience),
+            report_purpose=arguments.get("report_purpose", report_purpose),
+            task_type=arguments.get("task_type", task_type),
+            selected_sections=arguments.get("selected_sections", selected_sections),
+        )
+
+        messages.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": json.dumps(tool_result, indent=2),
+            }
+        )
+
+        tool_trace["tool_requested_by_model"] = True
+        tool_trace["tool_name"] = "analyze_public_sources"
+        tool_trace["tool_result_summary"] = {
+            "source_count": tool_result["source_count"],
+            "likely_topic": tool_result["likely_topic"],
+            "confidence_level": tool_result["confidence_level"],
+            "review_flags": tool_result["possible_conflicts_or_review_flags"]["review_flags"],
+        }
+
+    final_response = client.chat.completions.create(
+        model=model_name,
+        messages=messages,
+        temperature=0.3,
+    )
+
+    final_report = final_response.choices[0].message.content or ""
+
+    if not final_report.strip():
+        raise RuntimeError("The model returned an empty report.")
+
+    return final_report, tool_trace
 
 
 def call_save_report(report_text, metadata):
@@ -255,6 +822,53 @@ def call_save_feedback(feedback_text, rating, metadata):
     return save_feedback(feedback_text)
 
 
+def save_eval_record(expected_output, actual_output, metadata, tool_trace):
+    TESTS_DIR.mkdir(exist_ok=True)
+    eval_path = TESTS_DIR / "eval_results.md"
+
+    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    record = f"""
+## Evaluation Record
+
+Date:
+{created_at}
+
+Test purpose:
+Confirm TrendLens AI uses a real model callable tool before generating a structured situational awareness report.
+
+Expected output:
+{expected_output.strip()}
+
+Actual output:
+{actual_output.strip()}
+
+Generation mode:
+{metadata.get("generation_mode", "")}
+
+Tool used:
+{metadata.get("model_tool_used", "")}
+
+Prompt route:
+{metadata.get("prompt_route", "")}
+
+Tool trace summary:
+~~~json
+{json.dumps(tool_trace, indent=2)}
+~~~
+
+Result:
+The model callable tool workflow is successful if the tool trace shows that the model requested analyze_public_sources and the final report was generated after the tool result was returned.
+
+---
+"""
+
+    with eval_path.open("a", encoding="utf-8") as file:
+        file.write(record)
+
+    return eval_path
+
+
 def render_header():
     if banner_image is not None:
         st.image(banner_image, use_container_width=True)
@@ -275,27 +889,29 @@ def render_header():
         """
 TrendLens AI helps transform multiple public information sources into one structured situational awareness product.
 
-For this working draft, paste two or three public article excerpts, alerts, reports, updates, or event descriptions. The system compares the sources and generates an analyst style report with source overview, Bottom Line Up Front, executive summary, confidence assessment, source comparison, and follow up questions.
+For this working draft, paste two or three public article excerpts, alerts, reports, updates, or event descriptions. The system uses a real model callable function tool to analyze the sources before the final report is written.
 """
     )
 
 
-def render_agent_workflow_panel(valid_source_count, selected_sections, model_route):
+def render_agent_workflow_panel(valid_source_count, selected_sections, prompt_route):
     with st.expander("Agent workflow preview", expanded=True):
         st.markdown(
             """
-This panel shows how the application behaves like an agentic workflow instead of a basic chat box.
+This panel shows the actual workflow used by the app.
 """
         )
 
         workflow_steps = [
             "1. Accept user role, purpose, task type, and public source text.",
             "2. Validate whether enough public source text was provided.",
-            "3. Route the task to the correct model behavior.",
-            "4. Generate a structured situational awareness report.",
-            "5. Save the report output as an action.",
-            "6. Save user feedback as an evaluation action.",
-            "7. Support future monitoring checks for updated public information.",
+            "3. Select a prompt based route for the audience and task.",
+            "4. Send the model a real function schema called analyze_public_sources.",
+            "5. Let the model request the function tool.",
+            "6. Execute the Python function only after the model requests it.",
+            "7. Return the tool result to the model.",
+            "8. Generate the final situational awareness report from the tool result.",
+            "9. Save the report, feedback, and evaluation record as app actions.",
         ]
 
         for step in workflow_steps:
@@ -310,13 +926,17 @@ This panel shows how the application behaves like an agentic workflow instead of
             st.metric("Selected sections", len(selected_sections))
 
         with col_c:
-            st.metric("Model route", model_route)
+            st.metric("Prompt route", prompt_route.get("route_name", ""))
+
+        st.caption(
+            "Routing is intentionally prompt based in this version. The app uses one model and changes the instruction path by audience and task. It does not claim true multi model routing."
+        )
 
 
 def render_source_input(source_number, required=False):
     required_text = "Required" if required else "Optional"
 
-    with st.expander(f"Source {source_number} - {required_text}", expanded=required):
+    with st.expander(f"Source {source_number} | {required_text}", expanded=required):
         source_type = st.selectbox(
             f"Source {source_number} type",
             [
@@ -475,17 +1095,27 @@ def render_generate_report_tab():
         ),
     )
 
-    model_route = route_model_behavior(target_audience, task_type)
+    prompt_route = route_prompt_behavior(target_audience, task_type)
 
     st.divider()
 
-    st.header("4. Agentic Workflow and Model Routing")
+    st.header("4. Agentic Workflow and Routing")
 
-    render_agent_workflow_panel(valid_source_count, selected_sections, model_route)
+    render_agent_workflow_panel(valid_source_count, selected_sections, prompt_route)
 
     st.divider()
 
     st.header("5. Generate Report")
+
+    if not OPENAI_AVAILABLE:
+        st.error(
+            "The openai package is not installed. Install it with: pip install openai"
+        )
+
+    if not get_openai_api_key():
+        st.warning(
+            "OPENAI_API_KEY is not set. The report will not generate until the key is added to Streamlit secrets or the local environment."
+        )
 
     generate_button = st.button(
         "Generate TrendLens Report",
@@ -508,12 +1138,12 @@ def render_generate_report_tab():
                 output_depth=output_depth,
                 selected_sections=selected_sections,
                 sources=sources,
-                model_route=model_route,
+                prompt_route=prompt_route,
             )
 
-            with st.spinner("Generating structured situational awareness report..."):
+            with st.spinner("Generating report through the model callable tool workflow..."):
                 try:
-                    report = call_report_generator(
+                    report, tool_trace = run_model_tool_workflow(
                         sources=sources,
                         target_audience=target_audience,
                         report_purpose=report_purpose,
@@ -521,14 +1151,23 @@ def render_generate_report_tab():
                         custom_instructions=custom_instructions,
                         task_type=task_type,
                         output_depth=output_depth,
-                        model_route=model_route,
+                        prompt_route=prompt_route,
+                    )
+
+                    metadata["generation_mode"] = "model callable tool workflow"
+                    metadata["model_tool_used"] = "analyze_public_sources"
+                    metadata["tool_requested_by_model"] = tool_trace.get(
+                        "tool_requested_by_model", False
                     )
 
                     st.session_state.latest_report = report
                     st.session_state.latest_metadata = metadata
+                    st.session_state.latest_tool_trace = tool_trace
+                    st.session_state.latest_generation_mode = "model callable tool workflow"
                     st.session_state.feedback_saved = False
+                    st.session_state.eval_saved = False
 
-                    st.success("Report generated.")
+                    st.success("Report generated with real model callable tool use.")
 
                 except Exception as error:
                     st.error("The report could not be generated.")
@@ -537,6 +1176,13 @@ def render_generate_report_tab():
     if st.session_state.latest_report:
         st.divider()
         st.header("Generated Report")
+
+        if st.session_state.latest_generation_mode:
+            st.caption(f"Generation mode: {st.session_state.latest_generation_mode}")
+
+        if st.session_state.latest_tool_trace:
+            with st.expander("Model tool use trace", expanded=True):
+                st.json(st.session_state.latest_tool_trace)
 
         st.markdown(st.session_state.latest_report)
 
@@ -568,6 +1214,57 @@ def render_generate_report_tab():
                 mime="text/markdown",
                 use_container_width=True,
             )
+
+        st.divider()
+
+        st.header("Evaluation Record")
+
+        st.markdown(
+            """
+Use this section to satisfy the expected versus actual output requirement. After generating one report, enter the expected behavior and save the actual report output as the evaluation record.
+"""
+        )
+
+        default_expected_output = (
+            "The app should call the analyze_public_sources function tool before writing the final report. "
+            "The final output should include the selected report sections, compare the pasted public sources, "
+            "identify information gaps, include a confidence assessment, and avoid unsupported claims."
+        )
+
+        expected_output = st.text_area(
+            "Expected output",
+            value=default_expected_output,
+            height=140,
+            key="expected_eval_output",
+        )
+
+        actual_output = st.text_area(
+            "Actual output",
+            value=st.session_state.latest_report,
+            height=220,
+            key="actual_eval_output",
+        )
+
+        if st.button("Save Evaluation Record", use_container_width=True):
+            if not expected_output.strip() or not actual_output.strip():
+                st.error("Expected output and actual output are required.")
+            else:
+                try:
+                    eval_path = save_eval_record(
+                        expected_output=expected_output,
+                        actual_output=actual_output,
+                        metadata=st.session_state.latest_metadata,
+                        tool_trace=st.session_state.latest_tool_trace,
+                    )
+
+                    st.session_state.eval_saved = True
+
+                    st.success("Evaluation record saved.")
+                    st.write(f"Saved to: {eval_path}")
+
+                except Exception as error:
+                    st.error("The evaluation record could not be saved.")
+                    st.exception(error)
 
         st.divider()
 
@@ -869,7 +1566,7 @@ def render_analytics_tab():
     st.subheader("Current Working Draft Note")
 
     st.write(
-        "This placeholder shows the future analytics direction while keeping the current draft focused on source intake, report generation, feedback, and monitoring."
+        "This placeholder shows the future analytics direction while keeping the current draft focused on source intake, report generation, feedback, monitoring, and evaluation."
     )
 
 
@@ -885,14 +1582,15 @@ The application is designed to demonstrate:
 1. Reasoning based event categorization.
 2. Structured reporting workflows.
 3. Trend and pattern analysis.
-4. Contextual memory.
+4. Contextual memory through saved outputs.
 5. Adaptive output generation.
 6. Analyst style briefing products.
-7. Tool based actions.
+7. Real model callable tool use.
 8. Feedback logging.
 9. Semi automated monitoring.
-10. Model routing.
+10. Prompt based routing with an explicit explanation.
 11. Model Context Protocol style architecture.
+12. Expected versus actual evaluation logging.
 
 The primary audience is the intelligence analyst. Secondary audiences include emergency responders and the public.
 """
@@ -907,9 +1605,13 @@ The primary audience is the intelligence analyst. Secondary audiences include em
 
             user_input [label="User enters public sources"];
             validation [label="Source intake and validation"];
-            routing [label="Model routing"];
-            report_tool [label="Report generation tool"];
+            routing [label="Prompt based routing"];
+            tool_schema [label="Function schema sent to model"];
+            model_tool_call [label="Model requests analyze_public_sources"];
+            app_tool [label="App executes Python tool"];
+            tool_result [label="Tool result returned to model"];
             report_output [label="Structured report"];
+            eval_record [label="Expected vs actual eval record"];
             save_report [label="Save report"];
             feedback [label="Save feedback"];
             monitoring [label="Monitoring workflow"];
@@ -918,8 +1620,12 @@ The primary audience is the intelligence analyst. Secondary audiences include em
 
             user_input -> validation;
             validation -> routing;
-            routing -> report_tool;
-            report_tool -> report_output;
+            routing -> tool_schema;
+            tool_schema -> model_tool_call;
+            model_tool_call -> app_tool;
+            app_tool -> tool_result;
+            tool_result -> report_output;
+            report_output -> eval_record;
             report_output -> save_report;
             report_output -> feedback;
             validation -> monitoring;
@@ -928,6 +1634,20 @@ The primary audience is the intelligence analyst. Secondary audiences include em
         }
         """
     )
+
+    st.subheader("Routing Explanation")
+
+    st.write(
+        "This version uses prompt based routing rather than true multi model routing. The same model is used for generation, but the route instructions change based on audience and task. This is stated directly so the project does not claim separate model routing when it is not implemented."
+    )
+
+    st.subheader("Deployment Check")
+
+    st.write(
+        "If this page loaded, the deployed Streamlit app is awake at runtime. Record this run in BUILD_LOG.md after testing the deployed link."
+    )
+
+    st.write(f"App loaded at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     st.subheader("Data Safety Notice")
 
