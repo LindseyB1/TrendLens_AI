@@ -895,3 +895,14 @@ what exact code needs to change
 For now, your best mental model is:
 
 Streamlit is the house. GitHub is where the house plans live. Secrets are the locked drawer. The model is the analyst. A tool is a clearly defined function the analyst is allowed to request. The app still executes the tool, but the model must be the one calling/requesting it.
+## 04JUN2026 – README, Tool Workflow, and Evaluation Cleanup
+
+- Updated README.md to match the current app.py implementation.
+- Clarified that TrendLens AI uses one real model-callable tool named analyze_public_sources.
+- Clarified that the model is required to call the tool before final report generation.
+- Clarified that routing is prompt-based routing, not true multi-model routing.
+- Replaced broad MCP architecture claims with tool-based agentic workflow language.
+- Added an MCP-inspired design note without claiming a full MCP server.
+- Clarified that monitoring is semi-automated/planned and currently supports manual old-versus-new source comparison.
+- Added live Streamlit app link and GitHub repository link to README.md.
+- Confirmed evaluation records should include expected output, actual output, tool trace, prompt route, and result notes.
