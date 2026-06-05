@@ -1,18 +1,36 @@
 # TrendLens AI
 
-TrendLens AI is an agentic situational awareness and event analysis platform that turns public information into structured intelligence style reporting products.
+TrendLens AI is an agentic public event analysis assistant that turns user-provided public source text into structured situational awareness reports.
 
-The system helps users manage information overload by organizing local, national, and international public events into clear summaries, source comparisons, trend analysis, confidence notes, second and third order effects, and executive level briefing outputs.
+The current Project 2 working draft focuses on public source intake, audience-based report customization, prompt-based routing, one real model-callable tool, saved report outputs, feedback logging, semi-automated monitoring design, and expected-versus-actual evaluation records.
 
-TrendLens AI is a Project 2 working draft for an agentic artificial intelligence system. The current build focuses on public source analysis, structured reporting workflows, a real model callable tool, saved outputs, feedback logging, evaluation records, and a planned semi automated monitoring workflow.
+The app uses a model-callable function tool named `analyze_public_sources`. The model is required to call this tool before the final report is generated. The tool analyzes pasted public sources, identifies review flags, highlights information gaps, estimates confidence, and returns structured analysis that grounds the final report.
 
-The system does not replace professional judgment. It supports analysis by organizing public information, identifying patterns, highlighting information gaps, and helping users review what changed during developing events.
+TrendLens AI does not replace professional judgment and does not independently verify facts. It is designed to organize public or synthetic information, support source comparison, and help users create draft reports for human review.
+
+---
+
+## Live Demo and Repository
+
+Live app:
+
+```text
+https://trendlens-watch.streamlit.app/
+```
+
+GitHub repository:
+
+```text
+https://github.com/LindseyB1/TrendLens_AI
+```
+
+---
 
 ## Project 2 Working Draft Checkpoint
 
 This repository is a working draft submission for Project 2.
 
-Project 2 focuses on agentic systems. The goal is to design and ship an artificial intelligence workflow that can use tools, support Model Context Protocol style concepts, route tasks through different model behaviors, and operate with more autonomy than a basic chatbot.
+Project 2 focuses on agentic systems. The goal is to design and ship an artificial intelligence workflow that can use tools, support structured context and tool-use concepts, route tasks through different model behaviors, and operate with more autonomy than a basic chatbot.
 
 TrendLens AI demonstrates progress through:
 
@@ -20,20 +38,24 @@ TrendLens AI demonstrates progress through:
 2. Public source intake.
 3. Target audience selection.
 4. Report purpose input.
-5. Role based report customization.
+5. Role-based report customization.
 6. Structured prompt workflows.
-7. One real model callable tool with a function schema.
-8. Local helper functions for saving reports and feedback.
-9. Report generation.
-10. Report saving.
-11. Feedback logging.
-12. Evaluation logging.
-13. Event history planning.
-14. Semi automated monitoring design.
-15. Prompt based routing design.
-16. Model Context Protocol style tool structure.
+7. One real model-callable tool with a function schema.
+8. A required model tool call before final report generation.
+9. Visible model tool-use trace inside the app.
+10. Local helper functions for saving reports and feedback.
+11. Report generation.
+12. Report saving.
+13. Feedback logging.
+14. Evaluation logging.
+15. Event history planning.
+16. Semi-automated monitoring design.
+17. Prompt-based routing design.
+18. Tool-based agentic workflow architecture.
 
 The current version is not a final production system. It is a working prototype that shows a clear direction, working components, and continued development toward an agentic workflow.
+
+---
 
 ## Instructor Feedback Addressed
 
@@ -46,56 +68,59 @@ The feedback identified four needed fixes:
 3. The deployed app was asleep and needed to be opened and verified.
 4. The project needed an evaluation record showing expected versus actual output.
 
-The revised project documentation addresses those items as follows:
+The revised project addresses those items as follows:
 
-1. Tool use is now defined as a real model callable tool named `analyze_public_sources`.
-2. Routing is described honestly as prompt based routing unless a second model is later configured.
-3. Deployment status is tracked as a required manual check before final submission.
-4. Evaluation results are documented in `Tests/eval_results.md`.
+1. Tool use is now defined as a real model-callable tool named `analyze_public_sources`.
+2. The app requires the model to call `analyze_public_sources` before the final report is generated.
+3. Routing is described honestly as prompt-based routing unless a second model is later configured.
+4. Deployment status is tracked as a required manual check before final submission.
+5. Evaluation results are documented in `Tests/eval_results.md`.
+6. The app displays a model tool-use trace so the tool workflow can be inspected.
 
-## Live Demo and Deployment Status
+---
 
-Live app link:
-
-```text
-Add Streamlit deployed app link here
-```
-
-Deployment note:
+## Deployment Status
 
 Some free hosted Streamlit apps may sleep after inactivity. Before submitting the project, the deployed app should be opened, awakened, and tested with one sample input. The result should be recorded in `BUILD_LOG.md`.
 
 Recommended deployment check entry:
 
 ```text
-02JUN2026: Opened the deployed TrendLens AI app after inactivity. Confirmed the app loaded, accepted public source input, generated a structured situational awareness report, and allowed the output to be saved. Added an evaluation record with expected versus actual output.
+04JUN2026: Opened the deployed TrendLens AI app after inactivity. Confirmed the app loaded from app.py, accepted public source input, generated a structured situational awareness report, displayed the model tool-use trace, and allowed the output to be saved. Added an evaluation record with expected versus actual output.
 ```
+
+---
 
 ## Project Goal
 
-The goal of TrendLens AI is to build an AI assisted workflow system that goes beyond simple article summarization by introducing:
+The goal of TrendLens AI is to build an AI-assisted workflow system that goes beyond simple article summarization by introducing:
 
-1. Reasoning based event categorization.
+1. Reasoning-based event categorization.
 2. Structured reporting workflows.
 3. Trend and pattern analysis.
 4. Source comparison.
 5. Confidence assessment.
 6. Adaptive report generation.
-7. Analyst style briefing products.
+7. Analyst-style briefing products.
 8. Significant activity tracking.
 9. Raw tracker generation.
-10. Follow up question and Request for Information generation.
-11. Semi automated update monitoring.
-12. Prompt based routing for different user needs.
-13. Real model callable tool use.
+10. Follow-up question and Request for Information generation.
+11. Semi-automated update monitoring design.
+12. Prompt-based routing for different user needs.
+13. Real model-callable tool use.
+14. Expected-versus-actual evaluation logging.
 
-TrendLens AI is inspired by real world operational analysis workflows where large amounts of rapidly changing information must be converted into meaningful situational awareness products.
+TrendLens AI is inspired by real-world operational analysis workflows where large amounts of rapidly changing public information must be converted into meaningful situational awareness products.
+
+---
 
 ## Problem Statement
 
 During developing events, public information changes quickly. Multiple sources may report different details, update at different times, or focus on different parts of the event. This can make it difficult for users to understand what happened, why it matters, what changed, what is confirmed, what is uncertain, and what questions still need to be answered.
 
-A basic chatbot can summarize pasted text, but it does not always guide the user through a repeatable analysis process. TrendLens AI adds structure by asking for the target audience, report purpose, source information, source type, report sections, and output style. The system then uses a model callable source analysis tool and prompt guided reasoning to produce a consistent situational awareness report.
+A basic chatbot can summarize pasted text, but it does not always guide the user through a repeatable analysis process. TrendLens AI adds structure by asking for the target audience, report purpose, source information, source type, report sections, and output style. The system then uses a model-callable source analysis tool and prompt-guided reasoning to produce a consistent situational awareness report.
+
+---
 
 ## Narrow Project Scope
 
@@ -104,22 +129,25 @@ TrendLens AI has a narrow and realistic scope for this working draft.
 The current version focuses on:
 
 1. Public information only.
-2. User pasted source text.
+2. User-pasted source text.
 3. Two to three public sources per report.
 4. Local, national, and international public events.
-5. Role based report generation.
-6. Intelligence style situational awareness summaries.
+5. Role-based report generation.
+6. Intelligence-style situational awareness summaries.
 7. Source comparison and reliability notes.
 8. Confidence assessment.
-9. Follow up questions and Requests for Information.
+9. Follow-up questions and Requests for Information.
 10. Saved report outputs.
 11. Feedback logging.
-12. One model callable source analysis tool.
-13. Semi automated monitoring design.
-14. Prompt based routing design.
-15. Model Context Protocol style tool planning.
+12. One model-callable source analysis tool.
+13. Semi-automated monitoring design.
+14. Manual old-versus-new source comparison.
+15. Prompt-based routing design.
+16. Tool-based agentic workflow architecture.
 
 This version does not collect classified, private, restricted, sensitive, or protected information. Users should only enter public or synthetic information.
+
+---
 
 ## Target Audience
 
@@ -136,17 +164,25 @@ TrendLens AI is also designed to support:
 7. Organizations requiring situational awareness.
 8. Members of the public seeking clear event summaries.
 
+---
+
 ## Primary Audience
 
-Intelligence analysts can use TrendLens AI to organize public reporting, compare source details, identify emerging trends, assess confidence, and prepare briefing style outputs.
+Intelligence analysts can use TrendLens AI to organize public reporting, compare source details, identify emerging trends, assess confidence, and prepare briefing-style outputs.
+
+---
 
 ## Secondary Audience
 
 Emergency management personnel and emergency responders can use TrendLens AI to quickly understand public safety updates, local incident reporting, weather effects, infrastructure issues, and community impact concerns.
 
+---
+
 ## Public Audience
 
 Members of the public can use TrendLens AI to better understand developing events without needing to write advanced prompts or manually compare multiple sources.
+
+---
 
 ## Value Beyond a Basic Chatbot
 
@@ -159,15 +195,20 @@ The application guides the user through:
 3. Entering public source text.
 4. Labeling source type.
 5. Selecting desired report sections.
-6. Allowing the model to call a source analysis tool.
-7. Comparing public source information.
-8. Identifying confidence level.
-9. Generating a structured situational awareness report.
-10. Saving the report output.
-11. Saving user feedback.
-12. Preparing for future monitoring updates.
+6. Sending a tool schema to the model.
+7. Requiring the model to call the source analysis tool.
+8. Returning structured tool results to the model.
+9. Comparing public source information.
+10. Identifying confidence level.
+11. Generating a structured situational awareness report.
+12. Saving the report output.
+13. Saving user feedback.
+14. Saving expected-versus-actual evaluation records.
+15. Preparing for future monitoring updates.
 
 The user does not need to know how to write a strong intelligence prompt. The application handles the structure and produces a consistent report format.
+
+---
 
 ## Core Features
 
@@ -178,22 +219,53 @@ Current and planned capabilities include:
 3. Structured event categorization.
 4. Trend and anomaly detection.
 5. Trend and pattern analysis.
-6. Executive style briefing generation.
+6. Executive-style briefing generation.
 7. Raw tracker generation.
-8. Follow up question generation.
+8. Follow-up question generation.
 9. Request for Information generation.
-10. Multi level reporting outputs.
-11. Event history and contextual memory.
+10. Multi-level reporting outputs.
+11. Event history and contextual memory design.
 12. Analyst workflow automation.
 13. Public source comparison.
 14. Confidence assessment.
 15. Second and third order effects.
 16. Saved report outputs.
 17. Feedback logging.
-18. Semi automated monitoring.
-19. Prompt based routing.
-20. Model callable tool use.
-21. Model Context Protocol style tool design.
+18. Semi-automated monitoring design.
+19. Prompt-based routing.
+20. Model-callable tool use.
+21. Tool-based agentic workflow architecture.
+22. Evaluation record logging.
+
+---
+
+## Current Working Features
+
+The current app supports:
+
+1. Streamlit user interface.
+2. Target audience selection.
+3. Task type selection.
+4. Output depth selection.
+5. Report purpose input.
+6. Up to three public source entries.
+7. Source type, label, URL, and pasted text fields.
+8. Desired report section selection.
+9. Optional custom instructions.
+10. Prompt-based routing by audience and task.
+11. Real model-callable tool schema for `analyze_public_sources`.
+12. Required model tool call before final report generation.
+13. Tool trace display.
+14. Generated report display.
+15. Markdown report download.
+16. Report saving.
+17. Feedback logging.
+18. Expected-versus-actual evaluation record saving.
+19. Monitoring topic saving if `monitoring.py` is available.
+20. Manual source change comparison if `monitoring.py` is available.
+21. About tab explaining the workflow and safety limits.
+
+---
 
 ## Example Workflow
 
@@ -201,39 +273,49 @@ Current and planned capabilities include:
 
 Examples include:
 
-News article  
-Event summary  
-Incident description  
-Public information update  
-Public safety alert  
-Weather statement  
-Government update  
+- News article
+- Event summary
+- Incident description
+- Public information update
+- Public safety alert
+- Weather statement
+- Government update
 
-2. The model receives the tool schema.
+2. The app validates the source text.
 
-The model is given access to the `analyze_public_sources` tool. This tool is used when the report requires source comparison, confidence assessment, or identification of information gaps.
+The app checks whether at least one usable public source has been provided.
 
-3. The model calls the tool when needed.
+3. The app selects a prompt route.
 
-The model sends structured arguments to the tool, including source text, source labels, target audience, and report purpose.
+The app selects a prompt-based route based on target audience and task type. This is not true multi-model routing. It is instruction routing using one model.
 
-4. The application executes the tool.
+4. The model receives the tool schema.
 
-The app runs the local Python function and returns a structured result to the model.
+The model is given access to the `analyze_public_sources` function tool.
 
-5. The model generates the final report.
+5. The model is required to call the tool.
+
+The app uses a required tool-call workflow so the model must request `analyze_public_sources` before the final report is generated.
+
+6. The application executes the tool.
+
+The app runs the local Python function after the model requests it and returns a structured result to the model.
+
+7. The model generates the final report.
 
 The model uses the returned tool result to write the final situational awareness product.
 
-6. User reviews the output.
+8. User reviews the output.
 
-The user can save the report, provide feedback, and use the output as a draft for further review.
+The user can save the report, download it as Markdown, provide feedback, and save an expected-versus-actual evaluation record.
 
-## Real Model Callable Tool Use
+---
 
-The first version of the app used helper functions that were called directly by the Streamlit application. Those helper functions were useful for app logic, but they did not fully satisfy the tool use requirement because the model itself was not deciding when to call a tool.
+## Real Model-Callable Tool Use
 
-The revised design defines one real model callable tool:
+The first version of the app used helper functions that were called directly by the Streamlit application. Those helper functions were useful for app logic, but they did not fully satisfy the tool-use requirement because the model itself was not requesting the tool.
+
+The revised design defines one real model-callable tool:
 
 ```text
 analyze_public_sources
@@ -241,7 +323,11 @@ analyze_public_sources
 
 This tool allows the model to request structured source analysis before writing the final report.
 
-### Purpose of the Tool
+The current working draft defines the `analyze_public_sources` tool and its schema directly in `app.py`. This keeps the tool schema, model call, tool execution, and tool trace easier to inspect in one place for the project checkpoint.
+
+---
+
+## Purpose of the Tool
 
 The `analyze_public_sources` tool compares pasted public sources and returns structured analysis that the model can use to generate the final report.
 
@@ -249,82 +335,151 @@ The tool is responsible for identifying:
 
 1. Source count.
 2. Main event topic.
-3. Event type.
-4. Location.
-5. Key confirmed facts.
-6. Shared details across sources.
-7. Conflicting details across sources.
-8. Missing information.
-9. Possible public safety impacts.
-10. Possible operational impacts.
-11. Possible second and third order effects.
-12. Confidence level.
-13. Recommended follow up questions.
-14. Recommended Requests for Information.
+3. Source previews.
+4. Source types.
+5. Source labels.
+6. Whether URLs were provided.
+7. Top keywords.
+8. Shared keywords across sources.
+9. Possible numeric details requiring review.
+10. Possible date or time details requiring review.
+11. Possible location references requiring review.
+12. Information gaps.
+13. Possible second and third order effects.
+14. Confidence level.
+15. Analysis limits.
 
-### Function Schema Example
+The tool does not independently verify facts. It only analyzes the public or synthetic source text pasted by the user.
+
+---
+
+## Actual Tool Schema Fields
+
+The current model-callable tool uses a function schema with these main fields:
+
+```text
+sources
+target_audience
+report_purpose
+task_type
+selected_sections
+```
+
+Each source can include:
+
+```text
+source_number
+type
+label
+url
+text
+```
+
+The model receives this schema and must call the tool before the final report is generated.
+
+---
+
+## Simplified Function Schema Example
 
 ```json
 {
   "type": "function",
-  "name": "analyze_public_sources",
-  "description": "Compare public event sources and return structured source analysis before the final situational awareness report is written.",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "sources": {
-        "type": "array",
-        "description": "Public source entries submitted by the user.",
-        "items": {
-          "type": "object",
-          "properties": {
-            "label": {
-              "type": "string",
-              "description": "Short label for the source, such as local news, city alert, or industry report."
+  "function": {
+    "name": "analyze_public_sources",
+    "description": "Analyze user-provided public source text before the final situational awareness report is written.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "description": "Public source records pasted by the user.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_number": {
+                "type": "integer"
+              },
+              "type": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              }
             },
-            "source_type": {
-              "type": "string",
-              "description": "Type of source, such as article, public safety alert, weather statement, government update, or report."
-            },
-            "text": {
-              "type": "string",
-              "description": "Public or synthetic source text pasted by the user."
-            }
-          },
-          "required": ["label", "source_type", "text"]
+            "required": ["source_number", "type", "label", "text"]
+          }
+        },
+        "target_audience": {
+          "type": "string"
+        },
+        "report_purpose": {
+          "type": "string"
+        },
+        "task_type": {
+          "type": "string"
+        },
+        "selected_sections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
-      "target_audience": {
-        "type": "string",
-        "description": "Selected audience, such as Intelligence Analyst, Emergency Responder, or Public Audience."
-      },
-      "report_purpose": {
-        "type": "string",
-        "description": "The user's stated purpose for the report."
-      }
-    },
-    "required": ["sources", "target_audience", "report_purpose"]
+      "required": [
+        "sources",
+        "target_audience",
+        "report_purpose",
+        "task_type",
+        "selected_sections"
+      ]
+    }
   }
 }
 ```
 
-### Tool Call Workflow
+---
 
-The intended tool call workflow is:
+## Tool Call Workflow
+
+The tool call workflow is:
 
 1. User enters public source text.
-2. App sends the model the report request and the `analyze_public_sources` tool schema.
-3. Model decides whether source analysis is needed.
-4. Model calls `analyze_public_sources` with structured arguments.
-5. App executes the Python function in `trend_tools.py`.
-6. App returns the tool output to the model.
-7. Model uses the tool output to write the final report.
-8. App displays the final report in Streamlit.
-9. User can save the report and provide feedback.
+2. App validates the source input.
+3. App selects a prompt-based route.
+4. App sends the model the report request and the `analyze_public_sources` tool schema.
+5. App requires the model to call `analyze_public_sources`.
+6. Model requests the tool with structured arguments.
+7. App executes the Python function.
+8. App returns the tool output to the model.
+9. Model uses the tool output to write the final report.
+10. App displays the final report in Streamlit.
+11. User can save the report, download it, provide feedback, and save an evaluation record.
 
-### Why This Counts as Tool Use
+---
 
-This is different from normal helper functions because the model receives the tool definition and chooses to call it as part of the workflow. The application then executes the function and gives the result back to the model. This creates a model tool loop instead of only using backend Python functions.
+## Why This Counts as Tool Use
+
+This is different from normal helper functions because the model receives the tool definition and requests the tool as part of the workflow. The application then executes the function and gives the result back to the model.
+
+This creates a model tool loop:
+
+```text
+model receives tool schema
+model requests tool
+app executes tool
+app returns tool result
+model generates final report
+```
+
+The current version also displays a model tool-use trace so the workflow can be inspected during testing.
+
+---
 
 ## Local Helper Functions
 
@@ -337,8 +492,12 @@ Examples include:
 3. Saving monitoring topics.
 4. Comparing previous source text against updated source text.
 5. Recording evaluation results.
+6. Safely loading image assets.
+7. Creating project folders if needed.
 
-These helper functions are still useful, but they are separate from the model callable tool. The README separates these two categories so the project does not overstate what the model is doing.
+These helper functions are useful, but they are separate from the model-callable tool. The README separates these two categories so the project does not overstate what the model is doing.
+
+---
 
 ## Agentic System Design
 
@@ -349,8 +508,50 @@ This project focuses on the core pillars of agentic AI systems:
 3. Tools.
 4. Feedback.
 5. Limited autonomy.
-6. Prompt based routing.
-7. Model Context Protocol style structure.
+6. Prompt-based routing.
+7. Evaluation.
+8. Human review.
+
+---
+
+## Tool-Based Agentic Workflow Architecture
+
+TrendLens AI uses a tool-based agentic workflow architecture.
+
+This means the app is organized around:
+
+1. User input.
+2. Source validation.
+3. Prompt-based routing.
+4. Tool schema.
+5. Model-requested tool call.
+6. Local tool execution.
+7. Tool result returned to the model.
+8. Final model response.
+9. Saved output.
+10. Feedback and evaluation record.
+
+This architecture is more structured than a single chatbot prompt because the model must use a defined tool before writing the final report.
+
+---
+
+## MCP-Inspired Design Note
+
+TrendLens AI does not implement a full Model Context Protocol server or MCP client/server protocol in this working draft.
+
+The project is MCP-inspired because it separates:
+
+1. User inputs.
+2. Prompt instructions.
+3. Tool definitions.
+4. Tool results.
+5. Saved outputs.
+6. Monitoring state.
+7. Evaluation records.
+
+Future versions could convert these local tools into a formal MCP server or MCP-compatible tool layer. The current version should be evaluated as a tool-based agentic workflow, not as a full MCP implementation.
+
+---
 
 ## Reasoning
 
@@ -366,8 +567,10 @@ Reasoning tasks include:
 6. Confidence assessment.
 7. Risk identification.
 8. Second and third order effect analysis.
-9. Follow up question generation.
+9. Follow-up question generation.
 10. Request for Information generation.
+
+---
 
 ## Memory
 
@@ -384,19 +587,21 @@ Current and planned memory functions include:
 
 This memory design helps the application support continuity across event updates.
 
+---
+
 ## Tools
 
 TrendLens AI uses two types of tools.
 
-### Model Callable Tool
+### Model-Callable Tool
 
-The model callable tool is:
+The model-callable tool is:
 
 ```text
 analyze_public_sources
 ```
 
-This tool is exposed to the model through a function schema. The model can call it before generating the final report.
+This tool is exposed to the model through a function schema. The app requires the model to call it before generating the final report.
 
 ### Application Helper Tools
 
@@ -408,10 +613,12 @@ Helper tools include:
 2. Feedback saving.
 3. Source change detection.
 4. Monitoring topic storage.
-5. Scheduled monitoring checks.
+5. Planned scheduled monitoring support.
 6. Evaluation logging.
 
-The goal is to show that the application can take structured actions inside a workflow, while also showing at least one real model callable tool.
+The goal is to show that the application can take structured actions inside a workflow, while also showing at least one real model-callable tool.
+
+---
 
 ## Feedback
 
@@ -428,29 +635,44 @@ Feedback may include:
 
 Feedback is stored so future versions can compare report quality over time.
 
+---
+
 ## Limited Autonomy
 
-TrendLens AI includes a planned semi automated monitoring workflow.
+TrendLens AI includes a semi-automated monitoring design.
 
-A user can enter a public topic or event. The system can then check for updated information every five hours. When meaningful changes are detected, the system can generate an updated situational awareness report for human review.
+In the current working draft, the user can save a public topic or event and choose a planned monitoring interval. The app can also compare older source text against updated source text to identify changes.
 
-This is semi automated because the user still chooses the topic, reviews the final report, and validates the information.
+This is semi-automated because:
+
+1. The user chooses the topic.
+2. The user provides or reviews source text.
+3. The user controls when comparison occurs in the current draft.
+4. The user validates the final report.
+5. The system does not fully replace human judgment.
+
+A future version could connect the saved monitoring topics to a persistent background scheduler that checks for updated public information at the selected interval.
+
+---
 
 ## Weeks 3 to 4 Agentic Workflow Requirement
 
-The Weeks 3 to 4 project focus is to design and ship an agentic workflow using tools, Model Context Protocol, and model routing.
+The Weeks 3 to 4 project focus is to design and ship an agentic workflow using tools, structured context, and routing.
 
 TrendLens AI addresses this requirement through:
 
 1. A guided Streamlit workflow.
-2. A model callable function tool.
-3. Structured public source analysis.
-4. Prompt based routing by audience and task type.
-5. Saved reports.
-6. Feedback logging.
-7. Evaluation records.
-8. Planned monitoring checks.
-9. MCP style separation of prompts, tools, context, saved state, and outputs.
+2. A model-callable function tool.
+3. Required model tool use before final report generation.
+4. Structured public source analysis.
+5. Prompt-based routing by audience and task type.
+6. Saved reports.
+7. Feedback logging.
+8. Evaluation records.
+9. Planned monitoring checks.
+10. Tool-based separation of prompts, inputs, tools, context, saved state, and outputs.
+
+---
 
 ## Agentic Workflow
 
@@ -458,16 +680,19 @@ The current workflow is:
 
 1. User enters a public event topic or public source text.
 2. The application validates whether enough source text is present.
-3. The application sends the source text, user role, and report purpose to the model.
-4. The model can call `analyze_public_sources`.
-5. The application executes the tool call and returns the structured tool output.
-6. The model uses the tool output to produce a situational awareness report.
-7. The application displays the report.
-8. The save report helper stores the output.
-9. The feedback helper stores the user evaluation.
-10. The monitoring helper can compare prior source text against updated source text in a planned workflow.
-11. The scheduler worker can check for updates every five hours in a planned workflow.
-12. The routing layer selects the correct prompt behavior for the task.
+3. The application selects the prompt route based on audience and task type.
+4. The application sends the source text, user role, report purpose, and tool schema to the model.
+5. The model is required to call `analyze_public_sources`.
+6. The application executes the tool call and returns the structured tool output.
+7. The model uses the tool output to produce a situational awareness report.
+8. The application displays the report.
+9. The save report helper stores the output.
+10. The feedback helper stores the user evaluation.
+11. The evaluation helper stores expected-versus-actual records.
+12. The monitoring helper can compare prior source text against updated source text.
+13. The routing layer selects the correct prompt behavior for the task.
+
+---
 
 ## Tool Layer Design
 
@@ -475,45 +700,28 @@ TrendLens AI separates major actions into clear functions.
 
 The current and planned tool layer includes:
 
-1. Model callable source analysis tool.
+1. Model-callable source analysis tool.
 2. Report saving helper.
 3. Feedback saving helper.
 4. Source change detection helper.
 5. Monitoring topic helper.
-6. Scheduler worker helper.
+6. Planned scheduler worker helper.
 7. Prompt routing helper.
 8. Evaluation logging helper.
 
 This structure makes the application easier to test, expand, and evaluate.
 
-## Model Context Protocol Style Design
-
-Model Context Protocol, also known as MCP, is a design approach for connecting AI systems to tools, context, data, and structured actions.
-
-TrendLens AI does not require a full production MCP server for this working draft. Instead, the project uses an MCP style architecture by separating tools, inputs, outputs, prompts, context, and saved state into clear components.
-
-The MCP style design includes:
-
-1. Clearly defined user inputs.
-2. Structured public source text.
-3. Separate prompt files.
-4. One model callable tool schema.
-5. Local helper functions.
-6. Saved report outputs.
-7. Saved feedback.
-8. Monitoring state files.
-9. Scheduled update check planning.
-10. Routing logic for different task types.
-
-Future versions could convert these local tools into a formal MCP server or MCP compatible tool layer.
+---
 
 ## Routing Design
 
-TrendLens AI uses prompt based routing in the current working draft.
+TrendLens AI uses prompt-based routing in the current working draft.
 
 This means the app changes the instruction path based on the selected user role and task type, but it does not claim to route to completely separate models unless the code is later configured to do so.
 
 This clarification is important because changing prompts is not the same thing as using different models.
+
+---
 
 ## Current Routing Behavior
 
@@ -521,46 +729,73 @@ The current routing layer uses task type and audience selection.
 
 Example routing logic:
 
-1. If the user selects Intelligence Analyst, the system uses an intelligence style report prompt.
-2. If the user selects Emergency Responder, the system uses a public safety impact prompt.
-3. If the user selects Public Audience, the system uses a plain language explanation prompt.
-4. If the task is monitoring, the system uses a change detection prompt.
-5. If the task is feedback evaluation, the system uses a quality review prompt.
+1. If the user selects Intelligence Analyst, the system uses intelligence-style report instructions.
+2. If the user selects Emergency Responder, the system uses public safety and responder impact instructions.
+3. If the user selects Public Audience, the system uses plain-language instructions.
+4. If the task is Monitoring Update, the system uses monitoring-focused instructions.
+5. If the user selects Researcher, Journalist, or Security Professional, the system uses source comparison, attribution, risk, and impact instructions.
 
-This approach keeps the prototype simpler, cheaper, and easier to evaluate while still showing how different analyst workflows can produce different report structures.
+This approach keeps the prototype simpler, cheaper, and easier to evaluate while still showing how different workflows can produce different report structures.
 
-## Future Multi Model Routing Option
+---
 
-A future version could use true multi model routing.
+## Future Multi-Model Routing Option
+
+A future version could use true multi-model routing.
 
 Example future routing plan:
 
 1. A smaller or faster model could triage the source text.
-2. A stronger model could generate the final intelligence style report.
+2. A stronger model could generate the final intelligence-style report.
 3. A separate evaluation model could compare expected versus actual output.
 4. A monitoring model could summarize changes between old and new source text.
 
-The current version should be graded as prompt based routing, not true multi model routing.
+The current version should be graded as prompt-based routing, not true multi-model routing.
 
-## Semi Automated Monitoring Concept
+---
 
-TrendLens AI includes a planned semi automated monitoring workflow.
+## Cost Control Design
 
-The goal is to allow a user to enter a specific public topic or event. The system will then check for updated public source text on a regular interval and generate an updated situational awareness product when new information is available.
+TrendLens AI is designed to avoid unnecessary API costs.
 
-For this project version, the planned monitoring interval is every five hours.
+Cost-control choices include:
 
-The semi automated workflow is designed to:
+1. Using one main model for the working draft.
+2. Using prompt-based routing instead of multiple model calls for every task.
+3. Requiring only one model-callable tool workflow during report generation.
+4. Relying on user-pasted source text instead of automatic live web collection.
+5. Keeping monitoring semi-automated in the current draft.
+6. Saving outputs locally so the same report does not need to be regenerated repeatedly.
+7. Allowing short test cases for evaluation records.
 
-1. Store the user selected monitoring topic.
-2. Track the last reviewed public source text.
-3. Check for updated information every five hours.
-4. Compare new text against prior text.
-5. Identify what changed.
-6. Decide whether the change is meaningful.
-7. Generate an updated report when needed.
-8. Save the updated output.
-9. Present the output for human review.
+Future versions could add multi-model routing, but the current version keeps the model workflow focused and manageable.
+
+---
+
+## Semi-Automated Monitoring Concept
+
+TrendLens AI includes a planned semi-automated monitoring workflow.
+
+The goal is to allow a user to enter a specific public topic or event. The system can store the topic, track the intended monitoring interval, and support comparison between older and newer source text.
+
+For this project version, the planned monitoring interval can be selected by the user. The example interval used in project planning is every five hours.
+
+The semi-automated workflow is designed to:
+
+1. Store the user-selected monitoring topic.
+2. Store the monitoring purpose.
+3. Store the primary public source URL if provided.
+4. Track the selected check interval.
+5. Compare new text against prior text.
+6. Identify what changed.
+7. Decide whether the change is meaningful.
+8. Support updated report generation.
+9. Save the updated output.
+10. Present the output for human review.
+
+The current working draft does not claim a fully deployed background alerting service. Full automatic monitoring would require persistent hosting, storage, and an external background worker.
+
+---
 
 ## What Counts as a Meaningful Change
 
@@ -576,6 +811,8 @@ A meaningful change may include:
 8. New contradiction between sources.
 9. New second or third order effect.
 10. Change in confidence level.
+
+---
 
 ## Report Output Sections
 
@@ -594,9 +831,13 @@ TrendLens AI can generate report sections such as:
 11. Second and third order effects.
 12. Confidence assessment.
 13. Information gaps.
-14. Recommended follow up questions.
+14. Recommended follow-up questions.
 15. Requests for Information.
-16. Forty five second brief.
+16. Forty-five second brief.
+17. Raw tracker entry.
+18. Trend and anomaly detection.
+
+---
 
 ## Example Use Case
 
@@ -628,7 +869,9 @@ Source 3: Industry article explaining the supplier role in aerospace manufacturi
 
 Expected output:
 
-The report should identify confirmed facts, compare the sources, explain public safety effects, identify possible supply chain concerns, identify information gaps, and generate follow up questions. The report should avoid classified claims, avoid unsupported assumptions, and clearly separate confirmed details from possible impacts.
+The report should identify confirmed facts, compare the sources, explain public safety effects, identify possible supply chain concerns, identify information gaps, and generate follow-up questions. The report should avoid classified claims, avoid unsupported assumptions, and clearly separate confirmed details from possible impacts.
+
+---
 
 ## Evaluation
 
@@ -638,19 +881,33 @@ Evaluation records are stored in:
 Tests/eval_results.md
 ```
 
-### Evaluation Record 1 Summary
+The app includes an evaluation record section after a report is generated. This allows the user to save:
+
+1. Expected output.
+2. Actual output.
+3. Generation mode.
+4. Tool used.
+5. Prompt route.
+6. Tool trace summary.
+7. Result notes.
+
+Evaluation is important because the project needs proof that the app does what the README claims.
+
+---
+
+## Evaluation Record 1 Summary
 
 Test purpose:
 
-Confirm TrendLens AI can compare multiple public event sources and generate a structured intelligence style report.
+Confirm TrendLens AI can compare multiple public event sources and generate a structured intelligence-style report.
 
 Expected output:
 
-The report should include a Bottom Line Up Front, executive summary, key facts, source comparison, operational impacts, second and third order effects, confidence level, information gaps, and follow up questions.
+The report should include a Bottom Line Up Front, executive summary, key facts, source comparison, operational impacts, second and third order effects, confidence level, information gaps, and follow-up questions.
 
 Actual output:
 
-TrendLens AI generated a structured report with a Bottom Line Up Front, executive summary, key trends, risks, confidence level, and follow up questions. The output identified public safety impacts, possible supply chain concerns, and information gaps. The output needed minor improvement in clearly labeling which details came from each source.
+TrendLens AI generated a structured report with a Bottom Line Up Front, executive summary, key trends, risks, confidence level, and follow-up questions. The output identified public safety impacts, possible supply chain concerns, and information gaps. The output needed minor improvement in clearly labeling which details came from each source.
 
 Result:
 
@@ -658,7 +915,55 @@ Mostly successful.
 
 Revision made:
 
-Added a real model callable tool called `analyze_public_sources` so the model can request source comparison before producing the final report. Updated the README to explain that routing is prompt based rather than true multi model routing.
+Added a real model-callable tool called `analyze_public_sources` so the model must request source analysis before producing the final report. Updated the README to explain that routing is prompt-based rather than true multi-model routing.
+
+---
+
+## Recommended Evaluation Tests
+
+Before final submission, create at least three evaluation records.
+
+### Evaluation 1: Normal Public Event Report
+
+Purpose:
+
+Confirm the app can generate a normal structured situational awareness report from two or three public sources.
+
+Expected behavior:
+
+1. Tool trace shows `analyze_public_sources` was requested.
+2. Report includes selected sections.
+3. Report identifies key facts.
+4. Report includes confidence language.
+5. Report avoids unsupported claims.
+
+### Evaluation 2: Conflicting Source Details
+
+Purpose:
+
+Confirm the app can flag possible inconsistencies when sources contain different numbers, dates, locations, or claims.
+
+Expected behavior:
+
+1. Tool trace shows `analyze_public_sources` was requested.
+2. Report identifies possible areas needing human review.
+3. Report avoids pretending uncertain details are confirmed.
+4. Report includes follow-up questions or RFIs.
+
+### Evaluation 3: Weak or Incomplete Source Information
+
+Purpose:
+
+Confirm the app does not overclaim when only one weak source is provided.
+
+Expected behavior:
+
+1. Tool trace shows `analyze_public_sources` was requested.
+2. Report gives a lower confidence level.
+3. Report identifies information gaps.
+4. Report clearly states that more source confirmation is needed.
+
+---
 
 ## Grounding and Safety Rules
 
@@ -675,21 +980,49 @@ TrendLens AI should follow these rules:
 9. Avoid operational recommendations that require authority or professional judgment.
 10. Encourage users to verify important details with official sources.
 
+---
+
+## Data Safety Notice
+
+Users should not paste:
+
+1. Classified information.
+2. Controlled unclassified information.
+3. Private personal information.
+4. Protected health information.
+5. Law enforcement sensitive information.
+6. Restricted government information.
+7. Sensitive military information.
+8. Proprietary information they are not allowed to share.
+9. Passwords, API keys, tokens, or secrets.
+
+TrendLens AI is designed for public or synthetic information only.
+
+---
+
 ## Technologies
 
 TrendLens AI uses:
 
-Python  
-Streamlit  
-OpenAI API  
-Pandas  
-GitHub  
-Prompt engineering workflows  
-Markdown  
-File based output logging  
-Prompt based routing logic  
-Function schema tool design  
-Model Context Protocol style tool design  
+1. Python.
+2. Streamlit.
+3. OpenAI API.
+4. Pillow for image loading.
+5. GitHub.
+6. Markdown.
+7. File-based output logging.
+8. Prompt-based routing logic.
+9. Function schema tool design.
+10. Local JSON and Markdown records.
+
+Optional or planned supporting technologies may include:
+
+1. Pandas for future analytics.
+2. Scheduled worker logic for future monitoring.
+3. Additional model providers for future multi-model routing.
+4. Formal MCP-compatible tooling in a future version.
+
+---
 
 ## Project Structure
 
@@ -718,41 +1051,60 @@ TrendLens-AI/
         monitored_topics.json
         last_source_text.json
         monitoring_log.md
+    assets/
+        trendlens-icon.png
+        trendlens-banner.png
 ```
+
+Some files or folders may be planned, optional, or created automatically when the app runs.
+
+---
 
 ## Main Files
 
-`app.py`
+### `app.py`
 
-Runs the Streamlit application, collects user inputs, displays generated reports, exposes the model callable tool schema, handles tool call responses, and connects the app interface to helper functions.
+Runs the Streamlit application, collects user inputs, displays generated reports, defines the model-callable tool schema, handles model tool-call responses, displays the tool trace, and connects the app interface to helper functions.
 
-`trend_tools.py`
+The current working draft defines `analyze_public_sources` directly inside `app.py` so the model-callable tool workflow is easier to inspect.
 
-Stores reusable Python functions such as `analyze_public_sources`, `save_report`, `save_feedback`, and other report support functions.
+### `trend_tools.py`
 
-`monitoring.py`
+Stores reusable helper functions such as `save_report` and `save_feedback`.
 
-Stores monitoring related functions such as topic storage, source comparison, and meaningful change detection.
+Earlier versions used more report generation logic in this file. The current model-callable source analysis tool is defined in `app.py` for visibility during the Project 2 checkpoint.
 
-`scheduler_worker.py`
+### `monitoring.py`
 
-Represents the planned scheduled workflow that can check monitored topics every five hours.
+Stores monitoring-related functions such as topic storage, source comparison, and meaningful change detection.
 
-`Tests/eval_results.md`
+### `scheduler_worker.py`
 
-Stores expected versus actual output records.
+Represents the planned scheduled workflow that could check monitored topics at a selected interval in a future version.
 
-`BUILD_LOG.md`
+The current Streamlit deployment should not be graded as a fully automatic background scheduler unless this worker is separately deployed and tested.
+
+### `Tests/eval_results.md`
+
+Stores expected-versus-actual output records.
+
+### `BUILD_LOG.md`
 
 Documents project changes, testing, fixes, and deployment checks.
+
+### `requirements.txt`
+
+Lists the Python dependencies needed for local use and Streamlit deployment.
+
+---
 
 ## How to Run Locally
 
 1. Clone the repository.
 
 ```bash
-git clone your-repository-url
-cd TrendLens-AI
+git clone https://github.com/LindseyB1/TrendLens_AI.git
+cd TrendLens_AI
 ```
 
 2. Install dependencies.
@@ -762,6 +1114,8 @@ pip install -r requirements.txt
 ```
 
 3. Add the API key as an environment variable.
+
+For Command Prompt:
 
 ```bash
 set OPENAI_API_KEY=your_api_key_here
@@ -781,68 +1135,127 @@ streamlit run app.py
 
 5. Open the local URL shown in the terminal.
 
+---
+
+## Streamlit Secrets
+
+For Streamlit Community Cloud, the OpenAI API key should be stored in app secrets, not committed to GitHub.
+
+Example secret name:
+
+```toml
+OPENAI_API_KEY = "your_api_key_here"
+```
+
+Do not upload or commit the actual API key.
+
+The current app uses the model configured in `app.py`, with `gpt-4o-mini` as the default if no local environment variable is set.
+
+---
+
 ## How to Use the App
 
 1. Select the target audience.
-2. Enter the report purpose.
-3. Paste two or three public source texts.
-4. Label each source.
-5. Select desired report sections.
-6. Generate the report.
-7. Review the output.
-8. Save the report if useful.
-9. Submit feedback.
-10. Record evaluation notes when testing.
+2. Select the task type.
+3. Select output depth.
+4. Enter the report purpose.
+5. Paste one to three public source texts.
+6. Label each source.
+7. Add a public URL if available.
+8. Select desired report sections.
+9. Add optional custom instructions if needed.
+10. Generate the report.
+11. Review the model tool-use trace.
+12. Review the generated report.
+13. Save or download the report if useful.
+14. Save an expected-versus-actual evaluation record.
+15. Submit feedback.
+
+---
 
 ## Current Limitations
 
 The current version has limitations:
 
-1. It relies on user pasted source text.
+1. It relies on user-pasted source text.
 2. It does not independently verify every claim.
 3. It is not connected to live official feeds in the working draft.
-4. It uses prompt based routing rather than confirmed multi model routing.
+4. It uses prompt-based routing rather than confirmed multi-model routing.
 5. It includes planned monitoring features that may still need final testing.
-6. It should not be used with classified, private, restricted, sensitive, or protected information.
-7. It produces draft analysis for human review, not official reporting.
+6. It does not claim full background automation in the deployed Streamlit app.
+7. It should not be used with classified, private, restricted, sensitive, or protected information.
+8. It produces draft analysis for human review, not official reporting.
+9. The confidence estimate is basic and should be improved in future versions.
+10. Source attribution can be improved in future versions.
+
+---
 
 ## Future Improvements
 
 Future versions could add:
 
-1. True multi model routing.
-2. A formal MCP server.
+1. True multi-model routing.
+2. A formal MCP server or MCP-compatible tool layer.
 3. Live public source connectors.
 4. Source credibility scoring.
 5. Better change detection.
 6. Automated evaluation tests.
-7. Dashboard style event history.
+7. Dashboard-style event history.
 8. Export to PDF or Word.
-9. Map based event visualization.
-10. More role specific report templates.
+9. Map-based event visualization.
+10. More role-specific report templates.
 11. Better confidence scoring.
 12. More transparent source attribution.
+13. Persistent database storage.
+14. Email or dashboard alerts.
+15. Fully deployed background monitoring worker.
+
+---
 
 ## Submission Checklist
 
 Before final submission:
 
-1. Confirm `app.py` includes the model callable tool schema.
-2. Confirm `trend_tools.py` includes `analyze_public_sources`.
-3. Confirm README explains tool use clearly.
-4. Confirm README explains routing honestly as prompt based routing.
-5. Open the deployed app and wake it if it is asleep.
-6. Run one test input in the deployed app.
-7. Save or screenshot the successful output.
-8. Add one record to `Tests/eval_results.md`.
-9. Add one deployment check entry to `BUILD_LOG.md`.
-10. Commit and push the final changes.
+1. Confirm `app.py` includes the model-callable tool schema.
+2. Confirm the app requires the model to call `analyze_public_sources`.
+3. Confirm the tool trace displays after report generation.
+4. Confirm `trend_tools.py` includes report and feedback saving helpers.
+5. Confirm README explains tool use clearly.
+6. Confirm README explains routing honestly as prompt-based routing.
+7. Confirm README does not claim full MCP implementation.
+8. Confirm README does not claim full automatic monitoring unless separately deployed.
+9. Open the deployed app and wake it if it is asleep.
+10. Confirm the deployed app runs from `app.py`.
+11. Run one test input in the deployed app.
+12. Save or screenshot the successful output.
+13. Add at least one record to `Tests/eval_results.md`.
+14. Add one deployment check entry to `BUILD_LOG.md`.
+15. Commit and push the final changes.
 
 Recommended commit message:
 
 ```text
-Add model callable tool and evaluation record
+Clarify tool workflow and evaluation support
 ```
+
+---
+
+## Suggested Build Log Entry
+
+```markdown
+## 04JUN2026 – Tool Workflow and README Cleanup
+
+- Updated the project documentation to match the current app.py implementation.
+- Clarified that TrendLens AI uses one real model-callable tool named analyze_public_sources.
+- Clarified that the model is required to call the tool before final report generation.
+- Clarified that routing is prompt-based routing, not true multi-model routing.
+- Replaced broad MCP architecture claims with tool-based agentic workflow language.
+- Added an MCP-inspired design note without claiming a full MCP server.
+- Clarified that monitoring is semi-automated/planned and currently supports manual old-versus-new source comparison.
+- Confirmed that evaluation records should include expected output, actual output, tool trace, prompt route, and result notes.
+```
+
+---
 
 ## Originality and Ownership
 
@@ -850,8 +1263,16 @@ TrendLens AI was designed as an original Project 2 prototype focused on public e
 
 The project reflects an applied use case for agentic AI in public source analysis. It is intentionally scoped to public or synthetic information and does not require classified or restricted data.
 
+The project also reflects an iterative build process. Early versions risked overclaiming monitoring, routing, and tool use. The revised version narrows the claims and focuses on what the app can actually demonstrate: a working Streamlit interface, real model-callable tool use, prompt-based routing, saved outputs, feedback logging, semi-automated monitoring design, and expected-versus-actual evaluation records.
+
+---
+
 ## Final Project Summary
 
 TrendLens AI is an agentic public event analysis assistant that helps users turn multiple public sources into one structured situational awareness report.
 
-The most important update is that the system now includes a real model callable tool, `analyze_public_sources`, instead of only using helper functions called directly by the app. The README also clarifies that routing is currently prompt based routing, not true multi model routing, unless future code adds a second model. The project now includes a clearer deployment check process and an evaluation record showing expected versus actual output.
+The most important update is that the system now includes a real model-callable tool, `analyze_public_sources`, instead of only using helper functions called directly by the app. The model is required to call this tool before the final report is generated.
+
+The README also clarifies that routing is currently prompt-based routing, not true multi-model routing. The project does not claim a full MCP implementation. Instead, it uses a tool-based agentic workflow architecture with MCP-inspired separation of inputs, prompts, tools, results, saved outputs, monitoring state, and evaluation records.
+
+The project now includes a clearer deployment check process and an evaluation workflow showing expected versus actual output.
