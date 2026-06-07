@@ -329,6 +329,27 @@ ChatGPT pushed back on several parts of the design. This helped make the project
 6. The deployed app should match the README claims.
 7. The main Streamlit file must be app.py, not monitoring.py.
 
+## June 06, 2026
+
+### Final Project 2 Submission Polish
+
+#### Work Completed
+
+1. Added professional UI polish including Help / Quick Start, Settings, and Security / Login guidance.
+2. Documented that TrendLens AI uses one model with an audience/task instruction path, while requiring the model-callable `analyze_public_sources` tool before final report generation.
+3. Clarified that authentication is off by default for classroom/demo grading and can be enabled with `TRENDLENS_AUTH_REQUIRED=true`.
+4. Confirmed the app does not store passwords, MFA codes, or secrets in GitHub.
+5. Documented the addition of `security_utils.py` for sensitive marker validation and source safety checks.
+6. Recorded test results for `Tests/test_security_and_ui.py` and final pytest execution.
+
+#### Test Results
+
+- `pytest passed: 6 tests passed`
+
+#### Why This Mattered
+
+This final polish ensures the submission is classroom-ready with professional UI language, explicit security design, documented safety checks, and a recorded test outcome.
+
 ## Current Working Components
 
 1. Streamlit interface.

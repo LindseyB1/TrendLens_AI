@@ -8,6 +8,10 @@ from pathlib import Path
 import streamlit as st
 from PIL import Image, UnidentifiedImageError
 
+from auth import render_auth_gate
+from security_utils import validate_public_sources
+from ui_components import render_welcome_video
+
 from trend_tools import save_feedback, save_report
 
 
@@ -135,6 +139,28 @@ st.set_page_config(
     layout="wide",
 )
 
+render_auth_gate()
+
+# Small settings panel in the sidebar (non-breaking defaults)
+try:
+    with st.sidebar.expander("Settings", expanded=False):
+        show_welcome = st.checkbox(
+            "Show welcome video",
+            value=st.session_state.get("show_welcome_video", True),
+            key="show_welcome_video",
+        )
+
+        show_workflow = st.checkbox(
+            "Show workflow preview",
+            value=st.session_state.get("show_workflow_preview", True),
+            key="show_workflow_preview",
+        )
+
+        st.caption("Display options only. No authentication changes are made here.")
+except Exception:
+    # Ignore sidebar issues in non-Streamlit contexts
+    pass
+
 
 def initialize_session_state():
     if "latest_report" not in st.session_state:
@@ -169,6 +195,11 @@ def initialize_session_state():
             "Follow Up Questions / RFIs",
             "Forty Five Second Brief",
         ]
+    if "show_welcome_video" not in st.session_state:
+        st.session_state.show_welcome_video = True
+
+    if "show_workflow_preview" not in st.session_state:
+        st.session_state.show_workflow_preview = True
 
 
 def ensure_project_folders():
@@ -211,7 +242,7 @@ def get_openai_client():
 
 def route_prompt_behavior(target_audience, task_type):
     """
-    This is prompt based routing, not multi model routing.
+    This is a role-aware instruction path, not multi model routing.
 
     The instructor feedback said the previous version routed different prompts
     to the same model. This version labels that honestly. The app uses one
@@ -223,7 +254,7 @@ def route_prompt_behavior(target_audience, task_type):
 
     if "monitor" in task or "update" in task:
         return {
-            "route_name": "Prompt Route: Monitoring Update",
+            "route_name": "Instruction Path: Monitoring Update",
             "route_explanation": (
                 "Uses the same model with monitoring focused instructions for change detection and update reporting."
             ),
@@ -231,7 +262,7 @@ def route_prompt_behavior(target_audience, task_type):
 
     if "intelligence" in audience:
         return {
-            "route_name": "Prompt Route: Intelligence Analyst",
+            "route_name": "Instruction Path: Intelligence Analyst",
             "route_explanation": (
                 "Uses the same model with intelligence style instructions for source comparison, confidence, RFIs, and operational relevance."
             ),
@@ -239,7 +270,7 @@ def route_prompt_behavior(target_audience, task_type):
 
     if "emergency" in audience:
         return {
-            "route_name": "Prompt Route: Emergency Response",
+            "route_name": "Instruction Path: Emergency Response",
             "route_explanation": (
                 "Uses the same model with public safety and responder impact instructions."
             ),
@@ -247,7 +278,7 @@ def route_prompt_behavior(target_audience, task_type):
 
     if "public" in audience:
         return {
-            "route_name": "Prompt Route: Public Audience",
+            "route_name": "Instruction Path: Public Audience",
             "route_explanation": (
                 "Uses the same model with plain language instructions for a general public audience."
             ),
@@ -255,7 +286,7 @@ def route_prompt_behavior(target_audience, task_type):
 
     if "journalist" in audience or "researcher" in audience:
         return {
-            "route_name": "Prompt Route: Research and Journalism",
+            "route_name": "Instruction Path: Research and Journalism",
             "route_explanation": (
                 "Uses the same model with source comparison and attribution focused instructions."
             ),
@@ -263,14 +294,14 @@ def route_prompt_behavior(target_audience, task_type):
 
     if "security" in audience:
         return {
-            "route_name": "Prompt Route: Security Professional",
+            "route_name": "Instruction Path: Security Professional",
             "route_explanation": (
                 "Uses the same model with risk, impact, and security relevance instructions."
             ),
         }
 
     return {
-        "route_name": "Prompt Route: General Situational Awareness",
+        "route_name": "Instruction Path: General Situational Awareness",
         "route_explanation": (
             "Uses the same model with general situational awareness instructions."
         ),
@@ -871,7 +902,7 @@ The model callable tool workflow is successful if the tool trace shows that the 
 
 def render_header():
     if banner_image is not None:
-        st.image(banner_image, use_container_width=True)
+        st.image(banner_image, width="stretch")
     else:
         header_left, header_right = st.columns([1, 8])
 
@@ -1015,6 +1046,18 @@ def render_report_section_selector():
 def render_generate_report_tab():
     st.header("1. Define User Role and Report Purpose")
 
+    with st.expander("Help / Quick Start", expanded=False):
+        st.markdown(
+            """
+    - Step 1: Choose audience and report purpose.
+    - Step 2: Paste public or synthetic sources.
+    - Step 3: Select report sections.
+    - Step 4: Generate report.
+    - Step 5: Review confidence, source comparison, gaps, RFIs, and 45-second brief.
+
+    **Safety note:** Do not enter classified, private, sensitive, protected, or restricted data.
+    """
+        )
     left_column, right_column = st.columns(2)
 
     with left_column:
@@ -1079,6 +1122,14 @@ def render_generate_report_tab():
     sources = build_source_payload(source_1, source_2, source_3)
     valid_source_count = len(sources)
 
+    source_errors, source_warnings = validate_public_sources(sources)
+
+    for warning in source_warnings:
+        st.warning(warning)
+
+    for error in source_errors:
+        st.error(error)
+
     st.write(f"Valid sources detected: {valid_source_count}")
 
     st.divider()
@@ -1101,7 +1152,8 @@ def render_generate_report_tab():
 
     st.header("4. Agentic Workflow and Routing")
 
-    render_agent_workflow_panel(valid_source_count, selected_sections, prompt_route)
+    if st.session_state.get("show_workflow_preview", True):
+        render_agent_workflow_panel(valid_source_count, selected_sections, prompt_route)
 
     st.divider()
 
@@ -1124,7 +1176,10 @@ def render_generate_report_tab():
     )
 
     if generate_button:
-        if valid_source_count == 0:
+        if source_errors:
+            st.error("Fix the source input issues before generating a report.")
+            st.stop()
+        elif valid_source_count == 0:
             st.error("Paste at least one public source before generating a report.")
         elif not report_purpose.strip():
             st.error("Enter a report purpose before generating a report.")
@@ -1658,18 +1713,45 @@ Only use public or synthetic information. Do not enter classified, private, rest
     )
 
 
+def render_security_tab():
+    st.header("Security / Login")
+
+    st.markdown(
+        """
+Demo mode is open by default so an instructor can grade the app without requiring login.
+
+To require authentication in production, set the environment variable `TRENDLENS_AUTH_REQUIRED=true` or add it to Streamlit secrets.
+
+This app is designed to integrate with Streamlit OIDC authentication providers such as Google, Microsoft, Okta, or Auth0. MFA is handled by the identity provider.
+
+The app does not store passwords or MFA codes. Store secrets like OIDC client IDs and client secrets in `.streamlit/secrets.toml` locally or use Streamlit Cloud secrets — do not commit them to GitHub.
+
+The source intake fields are validated for possible sensitive markers before generation. Use the Generate Report tab to see validation warnings or errors.
+"""
+    )
+
+    # Also render the sidebar auth gate to give users consistent controls
+    try:
+        render_auth_gate()
+    except Exception:
+        st.info("Authentication controls are available in the sidebar when configured.")
+
+
 initialize_session_state()
 ensure_project_folders()
 render_header()
+if st.session_state.get("show_welcome_video", True):
+    render_welcome_video()
 
 
-main_tab, monitoring_tab, report_library_tab, alert_center_tab, analytics_tab, about_tab = st.tabs(
+main_tab, monitoring_tab, report_library_tab, alert_center_tab, analytics_tab, security_tab, about_tab = st.tabs(
     [
         "Generate Report",
         "Monitoring Workflow",
         "Report Library",
         "Alert Center",
         "Analytics",
+        "Security / Login",
         "About",
     ]
 )
@@ -1694,6 +1776,9 @@ with alert_center_tab:
 with analytics_tab:
     render_analytics_tab()
 
+
+with security_tab:
+    render_security_tab()
 
 with about_tab:
     render_about_tab()

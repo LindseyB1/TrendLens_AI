@@ -328,6 +328,23 @@ compares against previous calls
 explains WHY it flagged it
 THAT becomes a cybersecurity/consumer protection product.
 That is the difference your professor is talking about.
+
+---
+
+## Final AI Prompting and Documentation Notes
+
+The final submission focused on preserving existing functionality while improving professional UI wording, security design, input safety checks, and evaluation documentation.
+
+The AI prompting process was used to:
+
+1. Keep the model-callable `analyze_public_sources` workflow intact.
+2. Clarify that the system uses one model with an Audience/Task Instruction Path.
+3. Add a Help / Quick Start section and Settings controls.
+4. Add a Security / Login tab and production deployment guidance.
+5. Add security validation for pasted source text and public/synthetic data warnings.
+6. Document final test results with `pytest passed: 6 tests passed`.
+
+This helped ensure the final project submission is both technically correct and professionally documented.
 Britney: ok i dont like this idea its been done by another student for the email spam or email phising detection im talking about
  nuisance calls about loans or other things that feel like a denial of service because of the amount being sent to my phone and legitimate calls, not coming through or having to silence my phone from all the spam calls. I might need a better problem to solve as well, but this seems to be a very common one. Are there currently things out there to help with this? 
 Honestly, your instinct is correct. Email phishing detection is extremely overdone in student cybersecurity projects. Your professor will probably see “spam detection” and immediately compare it to generic classifiers unless you frame it differently.
@@ -2063,3 +2080,65 @@ database = saved topics and report history
 email service = alert delivery
 That is a strong agentic system explanation because it shows reasoning, tools, memory, feedback, and limited autonomy.
 
+---
+
+## Final Prompting and Documentation Notes
+
+The final submission focused on preserving the existing model-callable workflow while improving professional UI wording, security design, input safety checks, and evaluation documentation.
+
+The prompting process was used to:
+
+1. Preserve the model-callable `analyze_public_sources` workflow.
+2. Clarify that the system uses one model with an Audience/Task Instruction Path.
+3. Add a Help / Quick Start section and Settings controls.
+4. Add a Security / Login tab and production auth guidance.
+5. Add security validation for pasted source text and public/synthetic information warnings.
+6. Document final test results with `pytest passed: 6 tests passed`.
+
+This helped ensure the final submission is both technically correct and professionally documented.
+
+---
+
+## Copilot Prompt Log Update - Project 2 Final Polish
+
+Date: 06JUN2026
+
+Purpose:
+Used GitHub Copilot in VS Code to help finalize TrendLens AI Project 2 with professional UI, security, login/MFA planning, and app-polish features while preserving the existing agentic model-callable tool workflow.
+
+Prompt summary:
+Asked Copilot to review the current TrendLens AI Streamlit project and make a final Project 2 polish pass.
+
+Key instructions given to Copilot:
+- Do not remove the existing model-callable analyze_public_sources workflow.
+- Do not remove monitoring.py, trend_tools.py, report generation, evaluation logging, feedback logging, or the welcome video placeholder.
+- Keep authentication OFF by default for classroom/demo grading.
+- Do not require real login in the default deployed app.
+- Do not create a local password database.
+- Do not store passwords or MFA codes.
+- Add or improve a professional Security / Login tab.
+- Explain that production login can be enabled with TRENDLENS_AUTH_REQUIRED=true.
+- Explain that MFA is provider-managed through OIDC providers such as Google, Microsoft, Okta, or Auth0.
+- Add a Help / Quick Start section with clear user steps.
+- Add a Settings section for simple display options.
+- Improve the auth sidebar to show authentication status, MFA status, demo mode explanation, and production setup notes.
+- Keep the app functional and avoid syntax errors.
+
+Copilot-assisted changes made:
+- Added Security / Login tab.
+- Added Help / Quick Start expander.
+- Added sidebar Settings controls.
+- Improved auth.py sidebar messaging.
+- Kept authentication disabled by default for grading.
+- Preserved the model-callable analyze_public_sources workflow.
+- Preserved monitoring, feedback logging, evaluation logging, and report generation.
+- Added security/source validation support through security_utils.py.
+- Added welcome video placeholder and caption support.
+
+Validation performed:
+- Ran Python syntax checks on app.py, auth.py, security_utils.py, and ui_components.py.
+- Confirmed the Streamlit app starts locally.
+- Security/UI tests were added in Tests/test_security_and_ui.py.
+
+Result:
+This prompt improved the professional presentation of TrendLens AI while keeping the project accessible for classroom grading and preserving the core agentic workflow.

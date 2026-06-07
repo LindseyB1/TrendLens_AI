@@ -1276,3 +1276,40 @@ The most important update is that the system now includes a real model-callable 
 The README also clarifies that routing is currently prompt-based routing, not true multi-model routing. The project does not claim a full MCP implementation. Instead, it uses a tool-based agentic workflow architecture with MCP-inspired separation of inputs, prompts, tools, results, saved outputs, monitoring state, and evaluation records.
 
 The project now includes a clearer deployment check process and an evaluation workflow showing expected versus actual output.
+
+---
+
+## Final Project 2 Submission Notes
+
+### Professional UI updates
+- Help / Quick Start section added in the Generate Report tab.
+- Settings section added with display options for the welcome video and workflow preview.
+- Security / Login tab added for deployment and auth guidance.
+- Welcome video placeholder and subtitle support are preserved in the app.
+
+### Security design
+- Added `auth.py` for optional authentication.
+- Authentication is OFF by default for classroom/demo grading.
+- Production login can be enabled with `TRENDLENS_AUTH_REQUIRED=true`.
+- MFA is provider-managed through OIDC providers such as Google, Microsoft, Okta, or Auth0.
+- The app does not store passwords or MFA codes.
+- Secrets must be stored in `.streamlit/secrets.toml` or Streamlit Cloud secrets, not committed to GitHub.
+
+### Input safety
+- Added `security_utils.py` to validate pasted source text.
+- Public source text is checked for possible sensitive markers before report generation.
+- Users are warned to use only public or synthetic information.
+
+### Testing
+- Added `Tests/test_security_and_ui.py` to validate security and UI behavior.
+- Final test execution result: `pytest passed: 6 tests passed`.
+- The tests include sensitive marker blocking and WebVTT caption validation.
+
+### Agentic project requirements
+- The app continues to use the model-callable `analyze_public_sources` workflow.
+- The model must request the function before the final report is generated.
+- The interface explains the Audience/Task Instruction Path while using one model.
+- The monitoring workflow remains semi-automated.
+- Feedback logging and evaluation logging remain included.
+
+This final documentation supports a professional classroom submission with clear UI polish, security controls, safety checks, and test evidence.
