@@ -437,3 +437,35 @@ TrendLens AI demonstrates meaningful progress toward an agentic system. The curr
 - `Tests/test_security_and_ui.py` was added for security and UI validation.
 - Final test execution result: `pytest passed: 6 tests passed`.
 - This confirms the final submission includes documented evaluation and automated test evidence for the Project 2 checkpoint.
+
+## Eval 008: Chemical Spill Public Source Report Test
+
+Date: 07JUN2026
+
+Test input:
+`Data/sample_sources_chemical_spill.md`
+
+Audience:
+Intelligence Analyst
+
+Task:
+Create Executive Briefing
+
+Expected output:
+- Identify the main incident as a chemical spill near an industrial facility.
+- Mention road closures and public avoidance guidance.
+- Compare the city, company, and county emergency management sources.
+- Identify that the company source claims containment while public safety sources still recommend avoidance.
+- Include confidence level.
+- Include risks or concerns.
+- Include follow-up questions or RFIs.
+- Avoid claiming independent verification beyond the pasted sources.
+
+Actual output:
+The project includes a completed example report saved as `Outputs/example_report.md`. The report includes a BLUF, executive summary, source comparison, confidence assessment, risks and concerns, follow-up questions/RFIs, and a 45-second brief.
+
+Pass/Fail:
+Pass.
+
+Notes:
+This test confirms that TrendLens AI can use multiple public/synthetic source inputs to produce a structured intelligence-style situational awareness report.

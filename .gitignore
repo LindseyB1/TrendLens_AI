@@ -31,4 +31,11 @@ Thumbs.db
 # Local test/cache files
 .pytest_cache/
 .coverage
-htmlcov/
+htmlcov/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+.env
+.env.*
