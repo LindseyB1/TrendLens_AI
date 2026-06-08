@@ -4,7 +4,7 @@
 
 The purpose of this evaluation is to test whether TrendLens AI provides value beyond a basic chatbot summary. The application should take public information style inputs, organize them into a structured situational awareness product, identify key patterns, explain significance, assess confidence, and generate follow up questions.
 
-This evaluation also checks whether TrendLens AI demonstrates Project 2 agentic system behavior through reasoning, tool use, memory, feedback, model routing, and semi automated monitoring.
+This evaluation also checks whether TrendLens AI demonstrates Project 2 agentic system behavior through reasoning, tool use, memory, feedback, prompt-based routing, and semi automated monitoring.
 
 ## Evaluation Criteria
 
@@ -25,6 +25,10 @@ The system will be evaluated on whether it can:
 13. Save user feedback.
 14. Compare previous source text against updated source text.
 15. Support the five hour monitoring workflow design.
+16. Demonstrate real model-callable tool use through `analyze_public_sources`.
+17. Avoid claiming independent verification beyond the provided public or synthetic sources.
+
+---
 
 ## Test Case 1: International Security and Diplomatic Tension
 
@@ -48,15 +52,17 @@ The system should identify the first source as a security related incident invol
 
 ### Actual Output
 
-Pending live app test with these exact synthetic sources.
+Not executed as part of the final live app run. This planned test case is retained as a future evaluation scenario.
 
 ### Pass or Needs Improvement
 
-Pending.
+Not executed / Future test.
 
 ### Notes for Improvement
 
-This test should be completed before final submission. It is useful because it tests whether TrendLens AI can compare two related but different international security sources without overstating the connection.
+This test is useful for future evaluation because it checks whether TrendLens AI can compare two related but different international security sources without overstating the connection.
+
+---
 
 ## Test Case 2: Natural Disaster and Humanitarian Response
 
@@ -78,15 +84,17 @@ The system should identify the event as a natural disaster and humanitarian resp
 
 ### Actual Output
 
-Pending live app test with this exact synthetic source.
+Not executed as part of the final live app run. This planned test case is retained as a future evaluation scenario.
 
 ### Pass or Needs Improvement
 
-Pending.
+Not executed / Future test.
 
 ### Notes for Improvement
 
-This test should be completed before final submission. It is useful because it tests whether the app adjusts tone and focus for an emergency responder audience.
+This test is useful for future evaluation because it checks whether the app adjusts tone and focus for an emergency responder audience.
+
+---
 
 ## Test Case 3: Food Security and Economic Development
 
@@ -108,15 +116,17 @@ The system should identify the event as a food security, economic development, a
 
 ### Actual Output
 
-Pending live app test with this exact synthetic source.
+Not executed as part of the final live app run. This planned test case is retained as a future evaluation scenario.
 
 ### Pass or Needs Improvement
 
-Pending.
+Not executed / Future test.
 
 ### Notes for Improvement
 
-This test should be completed before final submission. It is useful because it tests trend analysis outside a public safety or military style topic.
+This test is useful for future evaluation because it tests trend analysis outside a public safety or military style topic.
+
+---
 
 ## Test Case 4: Mixed Event Inputs
 
@@ -142,15 +152,17 @@ The system should avoid forcing unrelated events into one false narrative. It sh
 
 ### Actual Output
 
-Pending live app test with these exact synthetic sources.
+Not executed as part of the final live app run. This planned test case is retained as a future evaluation scenario.
 
 ### Pass or Needs Improvement
 
-Pending.
+Not executed / Future test.
 
 ### Notes for Improvement
 
-This test should be completed before final submission. It is important because it checks whether the app avoids false connections between unrelated inputs.
+This test is important for future evaluation because it checks whether the app avoids false connections between unrelated inputs.
+
+---
 
 ## Test Case 5: Public Weather Source and Executive Briefing
 
@@ -189,7 +201,7 @@ The system should identify the source as a weather and public observation event.
 
 The deployed app generated a full TrendLens AI report titled:
 
-Clear Skies Enable Optimal Blue Moon Viewing in Metro Detroit, Michigan, Late May 2026
+`Clear Skies Enable Optimal Blue Moon Viewing in Metro Detroit, Michigan, Late May 2026`
 
 The output included:
 
@@ -213,6 +225,8 @@ Pass.
 
 The report was useful and structured. The confidence assessment was high even though only one source was used. In future testing, the confidence language should more clearly balance source credibility with the limitation that there was only one source.
 
+---
+
 ## Test Case 6: Local Tool Test with Chemical Spill Scenario
 
 ### Input Sources
@@ -235,7 +249,7 @@ The system should identify the event as a public safety and hazardous materials 
 
 ### Actual Output
 
-The local trend_tools.py test generated a complete TrendLens AI report. The report included:
+The local `trend_tools.py` test generated a complete TrendLens AI report. The report included:
 
 1. Source Overview
 2. Bottom Line Up Front
@@ -252,7 +266,9 @@ Pass.
 
 ### Notes for Improvement
 
-The output demonstrated that the report generation tool works outside the Streamlit interface. This is useful because it confirms that trend_tools.py can operate as a separate tool layer in the agentic system.
+The output demonstrated that the report generation tool works outside the Streamlit interface. This is useful because it confirms that the project has reusable helper logic in the agentic system.
+
+---
 
 ## Test Case 7: Monitoring Workflow Old Versus New Source Text
 
@@ -290,6 +306,8 @@ Pass.
 
 The current monitoring output is useful but can be made more user friendly. A future version should display old versus new information in a cleaner summary instead of relying mainly on JSON output.
 
+---
+
 ## Test Case 8: Scheduler Worker Status Test
 
 ### Input Sources
@@ -298,7 +316,7 @@ No source text was used. This test checked the scheduler worker command line sta
 
 ### Command Tested
 
-python scheduler_worker.py --status
+`python scheduler_worker.py --status`
 
 ### Expected Behavior
 
@@ -323,6 +341,8 @@ Pass.
 
 The result was correct because no monitoring topics had been saved yet. This test proves the scheduler worker can run and report status without crashing.
 
+---
+
 ## Test Case 9: Scheduler Worker Scan Once Test
 
 ### Input Sources
@@ -331,7 +351,7 @@ No source text was used. This test checked whether the scheduler worker could co
 
 ### Command Tested
 
-python scheduler_worker.py --scan-once
+`python scheduler_worker.py --scan-once`
 
 ### Expected Behavior
 
@@ -351,6 +371,8 @@ Pass.
 ### Notes for Improvement
 
 The result was correct because no monitoring topics were saved at the time of the scan. A future test should save a monitoring topic first, then run the scheduler after the topic becomes due.
+
+---
 
 ## Test Case 10: Deployed App Interface Test
 
@@ -373,7 +395,7 @@ The deployed app should open from the Streamlit Community Cloud link and display
 
 ### Actual Output
 
-The deployed app loaded successfully after the main file path was corrected to app.py. The interface displayed the expected title, description, tabs, source input fields, report section selector, and Agent Workflow Preview panel.
+The deployed app loaded successfully after the main file path was corrected to `app.py`. The interface displayed the expected title, description, tabs, source input fields, report section selector, and Agent Workflow Preview panel.
 
 ### Pass or Needs Improvement
 
@@ -381,7 +403,9 @@ Pass.
 
 ### Notes for Improvement
 
-The first deployment attempt pointed to monitoring.py, which caused the app to appear blank. This was corrected by changing the main file path to app.py.
+The first deployment attempt pointed to `monitoring.py`, which caused the app to appear blank. This was corrected by changing the main file path to `app.py`.
+
+---
 
 ## Initial Evaluation Summary
 
@@ -394,7 +418,7 @@ The strongest working features are:
 3. Role based report generation.
 4. Report section selection.
 5. Agent workflow preview.
-6. Model routing display.
+6. Prompt-based routing display.
 7. Structured report generation.
 8. Report download.
 9. Report saving.
@@ -403,8 +427,11 @@ The strongest working features are:
 12. Old versus new source comparison.
 13. Scheduler worker support.
 14. Streamlit Community Cloud deployment.
+15. Real model-callable tool workflow using `analyze_public_sources`.
 
-The current draft still needs more final evaluation examples using the original synthetic test cases. However, the deployed weather test, chemical spill tool test, monitoring test, and scheduler tests show that the core system is working.
+The current final version includes enough evaluation evidence to support the Project 2 submission. Future evaluation could still add more outputs using the original synthetic test cases, but the deployed weather test, chemical spill test, monitoring test, scheduler tests, automated pytest result, and deployed model tool trace test show that the core system is working.
+
+---
 
 ## Prompt or Design Changes Made After Testing
 
@@ -414,21 +441,27 @@ The following design changes were made or identified after testing:
 2. The project scope was narrowed to public source situational awareness reporting.
 3. The primary audience was clarified as intelligence analysts.
 4. Secondary audiences were clarified as emergency responders and the public.
-5. app.py was updated to show the agent workflow inside the user interface.
-6. monitoring.py was added to support old versus new source text comparison.
-7. scheduler_worker.py was added to support timed monitoring checks.
-8. trend_tools.py was merged with the original file to preserve source cleaning, URL extraction, prompt loading, source consolidation, report generation, saving, and feedback features.
-9. The deployed Streamlit app was corrected to use app.py instead of monitoring.py.
-10. Future design should add clearer old versus new change summaries in the Monitoring Workflow tab.
-11. Future design should let the user choose check frequency in minutes or hours.
-12. Future design should use persistent storage if user history, saved monitoring topics, or email alerts are added.
-13. Future design should use an external background worker or cloud scheduler for true always running monitoring.
+5. `app.py` was updated to show the agent workflow inside the user interface.
+6. `monitoring.py` was added to support old versus new source text comparison.
+7. `scheduler_worker.py` was added to support timed monitoring checks.
+8. `trend_tools.py` was merged with the original file to preserve source cleaning, URL extraction, prompt loading, source consolidation, report generation, saving, and feedback features.
+9. The deployed Streamlit app was corrected to use `app.py` instead of `monitoring.py`.
+10. The app was updated to use a real model-callable tool named `analyze_public_sources`.
+11. The app documentation was updated to clarify that routing is prompt-based routing, not true multi-model routing.
+12. Future design should add clearer old versus new change summaries in the Monitoring Workflow tab.
+13. Future design should let the user choose check frequency in minutes or hours.
+14. Future design should use persistent storage if user history, saved monitoring topics, or email alerts are added.
+15. Future design should use an external background worker or cloud scheduler for true always running monitoring.
+
+---
 
 ## Overall Result
 
-Overall result: Pass for working draft.
+Overall result: Pass for Project 2 final submission.
 
-TrendLens AI demonstrates meaningful progress toward an agentic system. The current version includes a working deployed app, structured report generation, tool based helper functions, model routing, saved outputs, feedback logging, monitoring support, and scheduler worker logic. The final version should add more evaluation outputs, improve monitoring display, and document any remaining limitations clearly.
+TrendLens AI demonstrates meaningful progress toward an agentic system. The current version includes a working deployed app, structured report generation, a real model-callable tool, prompt-based routing, saved outputs, feedback logging, monitoring support, scheduler worker logic, automated test evidence, sample data, and expected-versus-actual evaluation records.
+
+The final version should continue to document remaining limitations clearly. Report Library, Alert Center, Analytics, and full background alerting should remain described as future improvements unless they are fully implemented.
 
 ---
 
@@ -438,20 +471,26 @@ TrendLens AI demonstrates meaningful progress toward an agentic system. The curr
 - Final test execution result: `pytest passed: 6 tests passed`.
 - This confirms the final submission includes documented evaluation and automated test evidence for the Project 2 checkpoint.
 
+---
+
 ## Eval 008: Chemical Spill Public Source Report Test
 
 Date: 07JUN2026
 
-Test input:
+### Test input
+
 `Data/sample_sources_chemical_spill.md`
 
-Audience:
+### Audience
+
 Intelligence Analyst
 
-Task:
+### Task
+
 Create Executive Briefing
 
-Expected output:
+### Expected output
+
 - Identify the main incident as a chemical spill near an industrial facility.
 - Mention road closures and public avoidance guidance.
 - Compare the city, company, and county emergency management sources.
@@ -461,11 +500,111 @@ Expected output:
 - Include follow-up questions or RFIs.
 - Avoid claiming independent verification beyond the pasted sources.
 
-Actual output:
+### Actual output
+
 The project includes a completed example report saved as `Outputs/example_report.md`. The report includes a BLUF, executive summary, source comparison, confidence assessment, risks and concerns, follow-up questions/RFIs, and a 45-second brief.
 
-Pass/Fail:
+### Pass/Fail
+
 Pass.
 
-Notes:
+### Notes
+
 This test confirms that TrendLens AI can use multiple public/synthetic source inputs to produce a structured intelligence-style situational awareness report.
+
+---
+
+## Eval 009: Deployed App Model-Callable Tool Trace Test
+
+Date: 07JUN2026
+
+### Test Type
+
+Live deployed Streamlit app test.
+
+### Input Sources
+
+Source 1:
+NIH / National Toxicology Program public source about fluoride exposure and health assessment.
+
+Source 2:
+Johns Hopkins Bloomberg School of Public Health public article about fluoride in drinking water and public health context.
+
+### Role
+
+Researcher / Student
+
+### Task Type
+
+Generate follow up questions and RFIs.
+
+### Report Purpose
+
+To determine how dangerous fluoride is in the drinking water.
+
+### Expected Behavior
+
+The deployed app should:
+
+- Accept public source text.
+- Validate the source inputs.
+- Use the model-callable `analyze_public_sources` tool before final report generation.
+- Display the model tool use trace.
+- Show `tool_requested_by_model` as true.
+- Show `tool_name` as `analyze_public_sources`.
+- Use prompt-based routing language rather than claiming true multi-model routing.
+- Generate a structured report with source overview, BLUF, executive summary, source comparison, confidence assessment, RFIs, and/or a 45-second brief.
+- Avoid claiming independent verification beyond the pasted public sources.
+
+### Actual Output
+
+The deployed Streamlit app successfully generated a structured situational awareness report titled:
+
+`Situational Awareness Report: Fluoride Safety in Drinking Water`
+
+The app displayed the generation mode as:
+
+`model callable tool workflow`
+
+The model tool use trace showed:
+
+- `generation_mode`: `model callable tool workflow`
+- `model_name`: `gpt-4.1-mini`
+- `routing_type`: `prompt based routing`
+- `prompt_route`: `Instruction Path: Research and Journalism`
+- `tool_requested_by_model`: `true`
+- `tool_name`: `analyze_public_sources`
+- `source_count`: `2`
+- `confidence_level`: `Low to moderate`
+
+The report included:
+
+1. Source Overview
+2. Bottom Line Up Front
+3. Executive Summary
+4. So What / Why This Matters
+5. Source Comparison and Reliability Notes
+6. Confidence Assessment
+7. Follow Up Questions / RFIs
+8. Forty Five Second Brief
+
+The report also stated that it was based solely on the provided public sources and did not include independent verification or classified information.
+
+### Pass or Needs Improvement
+
+Pass.
+
+### Notes for Improvement
+
+The deployed app successfully demonstrates the specific Project 2 feedback requirement for real model-callable tool use. The Report Library, Alert Center, and Analytics tabs still show planned or coming-soon features, so those should remain documented as future improvements rather than current completed features.
+
+### Evidence
+
+Evidence captured in the deployed app PDF/screenshot record shows:
+
+- The app explains that it uses a real model-callable function tool before the final report is written.
+- The workflow panel shows the app sends the model a function schema, lets the model request the tool, executes the Python function after the model requests it, returns the tool result, and then generates the final report.
+- The model tool use trace shows `tool_requested_by_model: true` and `tool_name: analyze_public_sources`.
+- The generated report and evaluation record sections were visible in the deployed application.
+
+---
