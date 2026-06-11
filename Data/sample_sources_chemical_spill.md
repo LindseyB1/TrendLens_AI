@@ -1,4 +1,7 @@
-﻿# Sample Public Sources: Chemical Spill Test
+﻿
+
+
+# Sample Public Sources: Chemical Spill Test
 
 ## Source 1: Local Public Safety Update
 
@@ -11,3 +14,4 @@ The company stated that the spill was contained on site and that cleanup crews w
 ## Source 3: County Emergency Management Update
 
 County emergency management issued public guidance asking residents to avoid the area until further notice. Fire officials confirmed two nearby businesses were evacuated as a precaution while crews evaluated air quality and traffic control needs.
+

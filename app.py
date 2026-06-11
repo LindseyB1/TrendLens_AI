@@ -52,6 +52,18 @@ BANNER_PATH = ASSETS_DIR / "trendlens-banner.png"
 
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
+# P3 update:
+# The router uses an LLM tool call to choose the route. The generation step then
+# dispatches to the model assigned to that route. These can be changed in
+# Streamlit secrets or environment variables without editing code.
+ROUTER_MODEL = os.getenv("OPENAI_ROUTER_MODEL", "gpt-4o-mini")
+FAST_MODEL = os.getenv("OPENAI_FAST_MODEL", "gpt-4o-mini")
+DEEP_ANALYSIS_MODEL = os.getenv("OPENAI_DEEP_ANALYSIS_MODEL", "gpt-4o")
+SOURCE_COMPARISON_MODEL = os.getenv("OPENAI_SOURCE_COMPARISON_MODEL", "gpt-4o")
+MONITORING_MODEL = os.getenv("OPENAI_MONITORING_MODEL", "gpt-4o-mini")
+EXECUTIVE_BRIEF_MODEL = os.getenv("OPENAI_EXECUTIVE_BRIEF_MODEL", "gpt-4o-mini")
+FALLBACK_REPORT_MODEL = os.getenv("OPENAI_FALLBACK_REPORT_MODEL", "gpt-4o-mini")
+
 
 ANALYZE_PUBLIC_SOURCES_TOOL = {
     "type": "function",
@@ -106,6 +118,63 @@ ANALYZE_PUBLIC_SOURCES_TOOL = {
                 "report_purpose",
                 "task_type",
                 "selected_sections",
+            ],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
+
+SELECT_TRENDLENS_ROUTE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "select_trendlens_route",
+        "description": (
+            "Choose the best TrendLens AI analysis route and generation model based "
+            "on the user's audience, task type, purpose, selected sections, and pasted "
+            "source text. This is the P3 LLM-based routing decision."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "route_name": {
+                    "type": "string",
+                    "enum": [
+                        "fast_trend_summary",
+                        "deep_risk_analysis",
+                        "source_comparison",
+                        "monitoring_update",
+                        "executive_brief",
+                        "fallback_report",
+                    ],
+                    "description": "The route selected for this request.",
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Brief reason explaining why this route fits the input.",
+                },
+                "confidence": {
+                    "type": "string",
+                    "enum": ["Low", "Moderate", "High"],
+                    "description": "Confidence in the routing choice.",
+                },
+                "evidence_from_input": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Short cues from the user's selections or source text that support the route.",
+                },
+                "user_visible_summary": {
+                    "type": "string",
+                    "description": "One sentence summary suitable to show in the app trace.",
+                },
+            },
+            "required": [
+                "route_name",
+                "reason",
+                "confidence",
+                "evidence_from_input",
+                "user_visible_summary",
             ],
             "additionalProperties": False,
         },
@@ -178,6 +247,9 @@ def initialize_session_state():
     if "latest_generation_mode" not in st.session_state:
         st.session_state.latest_generation_mode = ""
 
+    if "latest_routing_decision" not in st.session_state:
+        st.session_state.latest_routing_decision = {}
+
     if "feedback_saved" not in st.session_state:
         st.session_state.feedback_saved = False
 
@@ -240,14 +312,80 @@ def get_openai_client():
     return OpenAI(api_key=api_key)
 
 
+
+def get_route_catalog():
+    """
+    Central catalog for true route-to-model dispatch.
+
+    The LLM router chooses one route_name. The app then uses this catalog to
+    select the generation model and route instructions. Change the environment
+    variables above if a different model name is needed for your account.
+    """
+    return {
+        "fast_trend_summary": {
+            "display_name": "Fast Trend Summary Route",
+            "selected_model": FAST_MODEL,
+            "model_key": "OPENAI_FAST_MODEL",
+            "route_instructions": (
+                "Generate a concise trend summary with a clear BLUF, key facts, "
+                "confidence language, and only the most important follow-up questions."
+            ),
+        },
+        "deep_risk_analysis": {
+            "display_name": "Deep Risk Analysis Route",
+            "selected_model": DEEP_ANALYSIS_MODEL,
+            "model_key": "OPENAI_DEEP_ANALYSIS_MODEL",
+            "route_instructions": (
+                "Generate a deeper risk-focused report. Emphasize risk, impact, "
+                "second and third order effects, assumptions, confidence, and RFIs."
+            ),
+        },
+        "source_comparison": {
+            "display_name": "Source Comparison Route",
+            "selected_model": SOURCE_COMPARISON_MODEL,
+            "model_key": "OPENAI_SOURCE_COMPARISON_MODEL",
+            "route_instructions": (
+                "Generate a source comparison report. Emphasize agreement, disagreement, "
+                "source limits, possible conflicts, and what needs verification."
+            ),
+        },
+        "monitoring_update": {
+            "display_name": "Monitoring Update Route",
+            "selected_model": MONITORING_MODEL,
+            "model_key": "OPENAI_MONITORING_MODEL",
+            "route_instructions": (
+                "Generate an update-style report. Emphasize what changed, why it matters, "
+                "whether the change appears meaningful, and what should be monitored next."
+            ),
+        },
+        "executive_brief": {
+            "display_name": "Executive Brief Route",
+            "selected_model": EXECUTIVE_BRIEF_MODEL,
+            "model_key": "OPENAI_EXECUTIVE_BRIEF_MODEL",
+            "route_instructions": (
+                "Generate a short executive-ready briefing with BLUF, key judgments, "
+                "decision relevance, confidence, and recommended next questions."
+            ),
+        },
+        "fallback_report": {
+            "display_name": "Fallback Report Route",
+            "selected_model": FALLBACK_REPORT_MODEL,
+            "model_key": "OPENAI_FALLBACK_REPORT_MODEL",
+            "route_instructions": (
+                "Generate a safe fallback-style report. Keep claims limited, flag missing "
+                "information, and avoid unsupported assumptions."
+            ),
+        },
+    }
+
+
 def route_prompt_behavior(target_audience, task_type):
     """
-    This is a role-aware instruction path, not multi model routing.
+    Legacy helper kept for transparency and backward compatibility.
 
-    The instructor feedback said the previous version routed different prompts
-    to the same model. This version labels that honestly. The app uses one
-    model and changes the route instructions by audience and task. A future
-    version can add true multi model routing by selecting different model names.
+    Earlier versions used this Python-only route label. P3 now uses
+    route_model_behavior_with_llm(), which makes the actual routing decision
+    through an LLM tool call and dispatches to a selected generation model.
     """
     audience = target_audience.lower()
     task = task_type.lower()
@@ -256,7 +394,7 @@ def route_prompt_behavior(target_audience, task_type):
         return {
             "route_name": "Instruction Path: Monitoring Update",
             "route_explanation": (
-                "Uses the same model with monitoring focused instructions for change detection and update reporting."
+                "Legacy Python prompt hint. Actual P3 routing is selected by the LLM router after Generate is clicked."
             ),
         }
 
@@ -264,7 +402,7 @@ def route_prompt_behavior(target_audience, task_type):
         return {
             "route_name": "Instruction Path: Intelligence Analyst",
             "route_explanation": (
-                "Uses the same model with intelligence style instructions for source comparison, confidence, RFIs, and operational relevance."
+                "Legacy Python prompt hint. Actual P3 routing is selected by the LLM router after Generate is clicked."
             ),
         }
 
@@ -272,7 +410,7 @@ def route_prompt_behavior(target_audience, task_type):
         return {
             "route_name": "Instruction Path: Emergency Response",
             "route_explanation": (
-                "Uses the same model with public safety and responder impact instructions."
+                "Legacy Python prompt hint. Actual P3 routing is selected by the LLM router after Generate is clicked."
             ),
         }
 
@@ -280,7 +418,7 @@ def route_prompt_behavior(target_audience, task_type):
         return {
             "route_name": "Instruction Path: Public Audience",
             "route_explanation": (
-                "Uses the same model with plain language instructions for a general public audience."
+                "Legacy Python prompt hint. Actual P3 routing is selected by the LLM router after Generate is clicked."
             ),
         }
 
@@ -288,7 +426,7 @@ def route_prompt_behavior(target_audience, task_type):
         return {
             "route_name": "Instruction Path: Research and Journalism",
             "route_explanation": (
-                "Uses the same model with source comparison and attribution focused instructions."
+                "Legacy Python prompt hint. Actual P3 routing is selected by the LLM router after Generate is clicked."
             ),
         }
 
@@ -296,17 +434,183 @@ def route_prompt_behavior(target_audience, task_type):
         return {
             "route_name": "Instruction Path: Security Professional",
             "route_explanation": (
-                "Uses the same model with risk, impact, and security relevance instructions."
+                "Legacy Python prompt hint. Actual P3 routing is selected by the LLM router after Generate is clicked."
             ),
         }
 
     return {
         "route_name": "Instruction Path: General Situational Awareness",
         "route_explanation": (
-            "Uses the same model with general situational awareness instructions."
+            "Legacy Python prompt hint. Actual P3 routing is selected by the LLM router after Generate is clicked."
         ),
     }
 
+
+def truncate_for_router(text, max_chars=900):
+    cleaned = clean_text(text)
+
+    if len(cleaned) <= max_chars:
+        return cleaned
+
+    return cleaned[:max_chars] + "..."
+
+
+def build_router_source_summaries(sources):
+    summaries = []
+
+    for source in sources:
+        summaries.append(
+            {
+                "source_number": source.get("source_number", len(summaries) + 1),
+                "type": source.get("type", "Not specified"),
+                "label": source.get("label", "Source"),
+                "url_present": bool(source.get("url", "")),
+                "text_preview": truncate_for_router(source.get("text", ""), max_chars=900),
+            }
+        )
+
+    return summaries
+
+
+def normalize_route_name(route_name):
+    route_catalog = get_route_catalog()
+    cleaned_route = str(route_name or "").strip().lower()
+
+    if cleaned_route in route_catalog:
+        return cleaned_route
+
+    # Safe default if the router returns an unexpected value.
+    return "fast_trend_summary"
+
+
+def route_model_behavior_with_llm(
+    sources,
+    target_audience,
+    report_purpose,
+    selected_sections,
+    task_type,
+    output_depth,
+):
+    """
+    P3 routing upgrade.
+
+    This replaces the Python-only routing decision with an LLM tool call. The
+    model must call select_trendlens_route. The app then dispatches the report
+    generation step to the model assigned to that route.
+    """
+    client = get_openai_client()
+    route_catalog = get_route_catalog()
+
+    route_catalog_for_prompt = {
+        route_name: {
+            "display_name": route_data["display_name"],
+            "generation_model": route_data["selected_model"],
+            "model_env_key": route_data["model_key"],
+            "best_for": route_data["route_instructions"],
+        }
+        for route_name, route_data in route_catalog.items()
+    }
+
+    router_payload = {
+        "target_audience": target_audience,
+        "report_purpose": report_purpose,
+        "task_type": task_type,
+        "output_depth": output_depth,
+        "selected_sections": selected_sections,
+        "source_count": len(sources),
+        "source_summaries": build_router_source_summaries(sources),
+        "available_routes": route_catalog_for_prompt,
+    }
+
+    system_message = """
+You are the TrendLens AI routing model.
+
+Your job is not to write the final report. Your job is to choose the best route
+for the request and call the select_trendlens_route tool exactly once.
+
+Choose based on the user's task type, target audience, selected sections, report
+purpose, and source text previews.
+
+Route selection guidance:
+- fast_trend_summary: quick, standard, or general situational awareness requests.
+- deep_risk_analysis: risk, threat, security, consequences, impacts, or complex events.
+- source_comparison: comparing multiple sources, conflicting claims, reliability, or attribution.
+- monitoring_update: monitoring, update, changed source text, anomaly, or ongoing event tracking.
+- executive_brief: leadership, decision-maker, executive briefing, short commander-style brief.
+- fallback_report: limited information, weak inputs, unclear topic, or when a cautious report is safest.
+
+Return only the tool call. Do not write normal text.
+"""
+
+    user_message = f"""
+Select the best TrendLens AI route for this request.
+
+Routing payload:
+{json.dumps(router_payload, indent=2)}
+"""
+
+    response = client.chat.completions.create(
+        model=ROUTER_MODEL,
+        messages=[
+            {"role": "system", "content": system_message.strip()},
+            {"role": "user", "content": user_message.strip()},
+        ],
+        tools=[SELECT_TRENDLENS_ROUTE_TOOL],
+        tool_choice={
+            "type": "function",
+            "function": {"name": "select_trendlens_route"},
+        },
+        temperature=0,
+    )
+
+    message = response.choices[0].message
+    tool_calls = message.tool_calls or []
+
+    if not tool_calls:
+        raise RuntimeError(
+            "The router model did not call select_trendlens_route. Routing cannot continue."
+        )
+
+    route_call = tool_calls[0]
+
+    try:
+        route_args = json.loads(route_call.function.arguments or "{}")
+    except json.JSONDecodeError:
+        route_args = {}
+
+    route_name = normalize_route_name(route_args.get("route_name", "fast_trend_summary"))
+    route_data = route_catalog[route_name]
+
+    routing_decision = {
+        "routing_type": "llm tool based model routing",
+        "router_model": ROUTER_MODEL,
+        "router_tool_name": "select_trendlens_route",
+        "router_tool_requested": True,
+        "route_name": route_name,
+        "route_display_name": route_data["display_name"],
+        "selected_model": route_data["selected_model"],
+        "model_key": route_data["model_key"],
+        "route_instructions": route_data["route_instructions"],
+        "reason": clean_text(route_args.get("reason", "")),
+        "confidence": route_args.get("confidence", "Moderate"),
+        "evidence_from_input": route_args.get("evidence_from_input", []),
+        "user_visible_summary": clean_text(route_args.get("user_visible_summary", "")),
+        "available_routes": {
+            name: data["selected_model"] for name, data in route_catalog.items()
+        },
+    }
+
+    if not routing_decision["reason"]:
+        routing_decision["reason"] = (
+            "The LLM router selected this route based on the user's audience, task type, purpose, and source text."
+        )
+
+    if not routing_decision["user_visible_summary"]:
+        routing_decision["user_visible_summary"] = (
+            f"Selected {route_data['display_name']} using {route_data['selected_model']}."
+        )
+
+    return routing_decision
 
 def build_source_payload(source_1, source_2, source_3):
     sources = []
@@ -328,6 +632,7 @@ def build_source_payload(source_1, source_2, source_3):
     return sources
 
 
+
 def build_metadata(
     target_audience,
     report_purpose,
@@ -335,7 +640,7 @@ def build_metadata(
     output_depth,
     selected_sections,
     sources,
-    prompt_route,
+    routing_decision,
 ):
     return {
         "app_name": APP_NAME,
@@ -346,12 +651,24 @@ def build_metadata(
         "output_depth": output_depth,
         "selected_sections": selected_sections,
         "valid_source_count": len(sources),
-        "routing_type": "prompt based routing",
-        "prompt_route": prompt_route.get("route_name", ""),
-        "route_explanation": prompt_route.get("route_explanation", ""),
-        "model_name": DEFAULT_MODEL,
+        "routing_type": routing_decision.get(
+            "routing_type", "llm tool based model routing"
+        ),
+        "router_model": routing_decision.get("router_model", ROUTER_MODEL),
+        "router_tool_name": routing_decision.get(
+            "router_tool_name", "select_trendlens_route"
+        ),
+        "router_tool_requested": routing_decision.get(
+            "router_tool_requested", False
+        ),
+        "llm_route": routing_decision.get("route_name", ""),
+        "route_display_name": routing_decision.get("route_display_name", ""),
+        "route_reason": routing_decision.get("reason", ""),
+        "route_confidence": routing_decision.get("confidence", ""),
+        "route_evidence": routing_decision.get("evidence_from_input", []),
+        "generation_model": routing_decision.get("selected_model", DEFAULT_MODEL),
+        "model_name": routing_decision.get("selected_model", DEFAULT_MODEL),
     }
-
 
 def clean_text(text):
     return re.sub(r"\s+", " ", str(text or "")).strip()
@@ -625,6 +942,7 @@ def analyze_public_sources(
     }
 
 
+
 def build_tool_workflow_messages(
     sources,
     target_audience,
@@ -633,7 +951,7 @@ def build_tool_workflow_messages(
     custom_instructions,
     task_type,
     output_depth,
-    prompt_route,
+    routing_decision,
 ):
     source_package = {
         "sources": sources,
@@ -643,17 +961,24 @@ def build_tool_workflow_messages(
         "selected_sections": selected_sections,
     }
 
-    system_message = """
+    system_message = f"""
 You are TrendLens AI, an agentic public event analysis assistant.
 
 Required workflow:
-1. Call the analyze_public_sources function before writing the final report.
-2. Use the tool result as the grounding layer for source comparison, confidence, information gaps, and second and third order effects.
-3. Do not claim that you verified facts outside the user provided source text.
-4. Separate source supported details from possible implications.
-5. Keep the tone appropriate for the selected audience.
-6. Use only public or synthetic information.
-7. Do not include classified, private, restricted, protected, or sensitive information.
+1. Use the LLM-selected route below as the analysis behavior for this report.
+2. Call the analyze_public_sources function before writing the final report.
+3. Use the tool result as the grounding layer for source comparison, confidence, information gaps, and second and third order effects.
+4. Do not claim that you verified facts outside the user provided source text.
+5. Separate source supported details from possible implications.
+6. Keep the tone appropriate for the selected audience.
+7. Use only public or synthetic information.
+8. Do not include classified, private, restricted, protected, or sensitive information.
+
+LLM selected route:
+{routing_decision.get("route_display_name", routing_decision.get("route_name", ""))}
+
+Route instructions:
+{routing_decision.get("route_instructions", "")}
 """
 
     user_message = f"""
@@ -672,13 +997,25 @@ Output depth:
 {output_depth}
 
 Routing type:
-Prompt based routing. This project intentionally uses one model and changes the instruction path by audience and task.
+{routing_decision.get("routing_type", "llm tool based model routing")}
 
-Prompt route:
-{prompt_route.get("route_name", "")}
+Router model:
+{routing_decision.get("router_model", ROUTER_MODEL)}
 
-Route explanation:
-{prompt_route.get("route_explanation", "")}
+Router tool:
+{routing_decision.get("router_tool_name", "select_trendlens_route")}
+
+LLM selected route:
+{routing_decision.get("route_display_name", routing_decision.get("route_name", ""))}
+
+Selected generation model:
+{routing_decision.get("selected_model", DEFAULT_MODEL)}
+
+Reason for route:
+{routing_decision.get("reason", "")}
+
+Route confidence:
+{routing_decision.get("confidence", "")}
 
 Selected report sections:
 {", ".join(selected_sections)}
@@ -706,16 +1043,18 @@ def run_model_tool_workflow(
     custom_instructions,
     task_type,
     output_depth,
-    prompt_route,
+    routing_decision,
 ):
     """
     Strict model callable tool workflow.
 
-    This function is the main report generation path. It does not call the old
-    report generator. It requires the model to call analyze_public_sources first.
+    P3 update:
+    1. The router model already selected a route through select_trendlens_route.
+    2. This function dispatches report generation to the model assigned to that route.
+    3. The selected generation model must call analyze_public_sources before writing.
     """
     client = get_openai_client()
-    model_name = DEFAULT_MODEL
+    model_name = routing_decision.get("selected_model", DEFAULT_MODEL)
 
     messages = build_tool_workflow_messages(
         sources=sources,
@@ -725,7 +1064,7 @@ def run_model_tool_workflow(
         custom_instructions=custom_instructions,
         task_type=task_type,
         output_depth=output_depth,
-        prompt_route=prompt_route,
+        routing_decision=routing_decision,
     )
 
     first_response = client.chat.completions.create(
@@ -744,22 +1083,39 @@ def run_model_tool_workflow(
 
     if not tool_calls:
         raise RuntimeError(
-            "The model did not request analyze_public_sources. The report was not generated because real model tool use is required."
+            "The generation model did not request analyze_public_sources. The report was not generated because real model tool use is required."
         )
 
     messages.append(first_message.model_dump(exclude_none=True))
 
     tool_trace = {
-        "generation_mode": "model callable tool workflow",
-        "model_name": model_name,
-        "routing_type": "prompt based routing",
-        "prompt_route": prompt_route.get("route_name", ""),
+        "generation_mode": "llm routed model callable tool workflow",
+        "routing_type": routing_decision.get(
+            "routing_type", "llm tool based model routing"
+        ),
+        "router_model": routing_decision.get("router_model", ROUTER_MODEL),
+        "router_tool_name": routing_decision.get(
+            "router_tool_name", "select_trendlens_route"
+        ),
+        "router_tool_requested": routing_decision.get(
+            "router_tool_requested", False
+        ),
+        "llm_route": routing_decision.get("route_name", ""),
+        "route_display_name": routing_decision.get("route_display_name", ""),
+        "route_reason": routing_decision.get("reason", ""),
+        "route_confidence": routing_decision.get("confidence", ""),
+        "route_evidence": routing_decision.get("evidence_from_input", []),
+        "generation_model": model_name,
         "tool_requested_by_model": False,
         "tool_name": "",
         "tool_result_summary": {},
         "workflow_steps": [
-            "The app provided a function schema to the model.",
-            "The model requested analyze_public_sources.",
+            "The app sent the request to the router model.",
+            "The router model called select_trendlens_route.",
+            "The app mapped the LLM route to a generation model.",
+            "The app dispatched report generation to the selected model.",
+            "The app provided a function schema to the generation model.",
+            "The generation model requested analyze_public_sources.",
             "The app executed the Python function after the model requested it.",
             "The app returned the tool result to the model.",
             "The model generated the final report after receiving the tool result.",
@@ -815,7 +1171,6 @@ def run_model_tool_workflow(
 
     return final_report, tool_trace
 
-
 def call_save_report(report_text, metadata):
     try:
         return save_report(report_text=report_text, metadata=metadata)
@@ -853,6 +1208,7 @@ def call_save_feedback(feedback_text, rating, metadata):
     return save_feedback(feedback_text)
 
 
+
 def save_eval_record(expected_output, actual_output, metadata, tool_trace):
     TESTS_DIR.mkdir(exist_ok=True)
     eval_path = TESTS_DIR / "eval_results.md"
@@ -866,7 +1222,7 @@ Date:
 {created_at}
 
 Test purpose:
-Confirm TrendLens AI uses a real model callable tool before generating a structured situational awareness report.
+Confirm TrendLens AI uses LLM tool-based routing and then uses a real model callable tool before generating a structured situational awareness report.
 
 Expected output:
 {expected_output.strip()}
@@ -877,11 +1233,26 @@ Actual output:
 Generation mode:
 {metadata.get("generation_mode", "")}
 
-Tool used:
-{metadata.get("model_tool_used", "")}
+Routing type:
+{metadata.get("routing_type", "")}
 
-Prompt route:
-{metadata.get("prompt_route", "")}
+Router model:
+{metadata.get("router_model", "")}
+
+Router tool:
+{metadata.get("router_tool_name", "")}
+
+LLM route selected:
+{metadata.get("route_display_name", metadata.get("llm_route", ""))}
+
+Route reason:
+{metadata.get("route_reason", "")}
+
+Selected generation model:
+{metadata.get("generation_model", metadata.get("model_name", ""))}
+
+Analysis tool used:
+{metadata.get("model_tool_used", "")}
 
 Tool trace summary:
 ~~~json
@@ -889,7 +1260,7 @@ Tool trace summary:
 ~~~
 
 Result:
-The model callable tool workflow is successful if the tool trace shows that the model requested analyze_public_sources and the final report was generated after the tool result was returned.
+The P3 workflow is successful if the trace shows that the router model requested select_trendlens_route, the app dispatched to the selected generation model, and the generation model requested analyze_public_sources before the final report was written.
 
 ---
 """
@@ -898,7 +1269,6 @@ The model callable tool workflow is successful if the tool trace shows that the 
         file.write(record)
 
     return eval_path
-
 
 def render_header():
     if banner_image is not None:
@@ -925,7 +1295,8 @@ For this working draft, paste two or three public article excerpts, alerts, repo
     )
 
 
-def render_agent_workflow_panel(valid_source_count, selected_sections, prompt_route):
+
+def render_agent_workflow_panel(valid_source_count, selected_sections):
     with st.expander("Agent workflow preview", expanded=True):
         st.markdown(
             """
@@ -936,13 +1307,14 @@ This panel shows the actual workflow used by the app.
         workflow_steps = [
             "1. Accept user role, purpose, task type, and public source text.",
             "2. Validate whether enough public source text was provided.",
-            "3. Select a prompt based route for the audience and task.",
-            "4. Send the model a real function schema called analyze_public_sources.",
-            "5. Let the model request the function tool.",
-            "6. Execute the Python function only after the model requests it.",
-            "7. Return the tool result to the model.",
-            "8. Generate the final situational awareness report from the tool result.",
-            "9. Save the report, feedback, and evaluation record as app actions.",
+            "3. Send the request to an LLM router tool called select_trendlens_route.",
+            "4. Use the LLM route to dispatch generation to the selected model.",
+            "5. Send the selected model a real function schema called analyze_public_sources.",
+            "6. Let the generation model request the function tool.",
+            "7. Execute the Python function only after the model requests it.",
+            "8. Return the tool result to the model.",
+            "9. Generate the final situational awareness report from the tool result.",
+            "10. Save the report, feedback, and evaluation record as app actions.",
         ]
 
         for step in workflow_steps:
@@ -957,12 +1329,19 @@ This panel shows the actual workflow used by the app.
             st.metric("Selected sections", len(selected_sections))
 
         with col_c:
-            st.metric("Prompt route", prompt_route.get("route_name", ""))
+            if st.session_state.get("latest_routing_decision"):
+                st.metric(
+                    "Last LLM route",
+                    st.session_state.latest_routing_decision.get(
+                        "route_display_name", "Route selected"
+                    ),
+                )
+            else:
+                st.metric("LLM route", "Selected after Generate")
 
         st.caption(
-            "Routing is intentionally prompt based in this version. The app uses one model and changes the instruction path by audience and task. It does not claim true multi model routing."
+            "P3 update: the app no longer only changes prompt text. When Generate is clicked, an LLM router chooses the route, and the app dispatches to the model assigned to that route."
         )
-
 
 def render_source_input(source_number, required=False):
     required_text = "Required" if required else "Optional"
@@ -1043,6 +1422,7 @@ def render_report_section_selector():
     return selected_sections
 
 
+
 def render_generate_report_tab():
     st.header("1. Define User Role and Report Purpose")
 
@@ -1053,11 +1433,12 @@ def render_generate_report_tab():
     - Step 2: Paste public or synthetic sources.
     - Step 3: Select report sections.
     - Step 4: Generate report.
-    - Step 5: Review confidence, source comparison, gaps, RFIs, and 45-second brief.
+    - Step 5: Review the LLM routing decision, selected model, confidence, source comparison, gaps, RFIs, and 45-second brief.
 
     **Safety note:** Do not enter classified, private, sensitive, protected, or restricted data.
     """
         )
+
     left_column, right_column = st.columns(2)
 
     with left_column:
@@ -1146,14 +1527,28 @@ def render_generate_report_tab():
         ),
     )
 
-    prompt_route = route_prompt_behavior(target_audience, task_type)
-
     st.divider()
 
-    st.header("4. Agentic Workflow and Routing")
+    st.header("4. Agentic Workflow and LLM Model Routing")
 
     if st.session_state.get("show_workflow_preview", True):
-        render_agent_workflow_panel(valid_source_count, selected_sections, prompt_route)
+        render_agent_workflow_panel(valid_source_count, selected_sections)
+
+    with st.expander("Available model routes", expanded=False):
+        route_catalog = get_route_catalog()
+
+        st.write(
+            "The LLM router chooses one of these routes after you click Generate. The app then uses the model assigned to that route."
+        )
+
+        for route_name, route_data in route_catalog.items():
+            st.markdown(
+                f"**{route_data['display_name']}**  \n"
+                f"Route key: `{route_name}`  \n"
+                f"Model: `{route_data['selected_model']}`  \n"
+                f"Configured by: `{route_data['model_key']}`  \n"
+                f"{route_data['route_instructions']}"
+            )
 
     st.divider()
 
@@ -1186,18 +1581,27 @@ def render_generate_report_tab():
         elif not selected_sections:
             st.error("Select at least one report section before generating a report.")
         else:
-            metadata = build_metadata(
-                target_audience=target_audience,
-                report_purpose=report_purpose,
-                task_type=task_type,
-                output_depth=output_depth,
-                selected_sections=selected_sections,
-                sources=sources,
-                prompt_route=prompt_route,
-            )
-
-            with st.spinner("Generating report through the model callable tool workflow..."):
+            with st.spinner("Selecting LLM route, dispatching model, and generating report..."):
                 try:
+                    routing_decision = route_model_behavior_with_llm(
+                        sources=sources,
+                        target_audience=target_audience,
+                        report_purpose=report_purpose,
+                        selected_sections=selected_sections,
+                        task_type=task_type,
+                        output_depth=output_depth,
+                    )
+
+                    metadata = build_metadata(
+                        target_audience=target_audience,
+                        report_purpose=report_purpose,
+                        task_type=task_type,
+                        output_depth=output_depth,
+                        selected_sections=selected_sections,
+                        sources=sources,
+                        routing_decision=routing_decision,
+                    )
+
                     report, tool_trace = run_model_tool_workflow(
                         sources=sources,
                         target_audience=target_audience,
@@ -1206,10 +1610,10 @@ def render_generate_report_tab():
                         custom_instructions=custom_instructions,
                         task_type=task_type,
                         output_depth=output_depth,
-                        prompt_route=prompt_route,
+                        routing_decision=routing_decision,
                     )
 
-                    metadata["generation_mode"] = "model callable tool workflow"
+                    metadata["generation_mode"] = "llm routed model callable tool workflow"
                     metadata["model_tool_used"] = "analyze_public_sources"
                     metadata["tool_requested_by_model"] = tool_trace.get(
                         "tool_requested_by_model", False
@@ -1218,11 +1622,16 @@ def render_generate_report_tab():
                     st.session_state.latest_report = report
                     st.session_state.latest_metadata = metadata
                     st.session_state.latest_tool_trace = tool_trace
-                    st.session_state.latest_generation_mode = "model callable tool workflow"
+                    st.session_state.latest_routing_decision = routing_decision
+                    st.session_state.latest_generation_mode = (
+                        "llm routed model callable tool workflow"
+                    )
                     st.session_state.feedback_saved = False
                     st.session_state.eval_saved = False
 
-                    st.success("Report generated with real model callable tool use.")
+                    st.success(
+                        "Report generated with LLM model routing and real model callable tool use."
+                    )
 
                 except Exception as error:
                     st.error("The report could not be generated.")
@@ -1234,6 +1643,34 @@ def render_generate_report_tab():
 
         if st.session_state.latest_generation_mode:
             st.caption(f"Generation mode: {st.session_state.latest_generation_mode}")
+
+        if st.session_state.latest_routing_decision:
+            with st.expander("LLM routing decision", expanded=True):
+                route = st.session_state.latest_routing_decision
+
+                col_route, col_model, col_confidence = st.columns(3)
+
+                with col_route:
+                    st.metric(
+                        "Route selected",
+                        route.get("route_display_name", route.get("route_name", "")),
+                    )
+
+                with col_model:
+                    st.metric("Generation model", route.get("selected_model", ""))
+
+                with col_confidence:
+                    st.metric("Route confidence", route.get("confidence", ""))
+
+                st.write(f"Reason: {route.get('reason', '')}")
+
+                if route.get("evidence_from_input"):
+                    st.write("Evidence from input:")
+                    for item in route.get("evidence_from_input", []):
+                        st.write(f"• {item}")
+
+                with st.expander("Full routing JSON", expanded=False):
+                    st.json(route)
 
         if st.session_state.latest_tool_trace:
             with st.expander("Model tool use trace", expanded=True):
@@ -1281,9 +1718,10 @@ Use this section to satisfy the expected versus actual output requirement. After
         )
 
         default_expected_output = (
-            "The app should call the analyze_public_sources function tool before writing the final report. "
-            "The final output should include the selected report sections, compare the pasted public sources, "
-            "identify information gaps, include a confidence assessment, and avoid unsupported claims."
+            "The app should use an LLM tool call named select_trendlens_route to choose the best route, "
+            "dispatch generation to the selected model, call analyze_public_sources before writing the final report, "
+            "include the selected report sections, compare the pasted public sources, identify information gaps, "
+            "include a confidence assessment, and avoid unsupported claims."
         )
 
         expected_output = st.text_area(
@@ -1360,7 +1798,6 @@ Use this section to satisfy the expected versus actual output requirement. After
                 except Exception as error:
                     st.error("Feedback could not be saved.")
                     st.exception(error)
-
 
 def render_monitoring_tab():
     st.header("Semi Automated Monitoring")
@@ -1625,12 +2062,13 @@ def render_analytics_tab():
     )
 
 
+
 def render_about_tab():
     st.header("About TrendLens AI")
 
     st.markdown(
         """
-TrendLens AI is a classroom Project 2 working draft focused on agentic AI systems.
+TrendLens AI is a classroom Project 2 / Project 3 working draft focused on agentic AI systems.
 
 The application is designed to demonstrate:
 
@@ -1643,7 +2081,7 @@ The application is designed to demonstrate:
 7. Real model callable tool use.
 8. Feedback logging.
 9. Semi automated monitoring.
-10. Prompt based routing with an explicit explanation.
+10. LLM tool based model routing.
 11. Model Context Protocol style architecture.
 12. Expected versus actual evaluation logging.
 
@@ -1660,10 +2098,12 @@ The primary audience is the intelligence analyst. Secondary audiences include em
 
             user_input [label="User enters public sources"];
             validation [label="Source intake and validation"];
-            routing [label="Prompt based routing"];
-            tool_schema [label="Function schema sent to model"];
+            router_model [label="Router model"];
+            route_tool [label="select_trendlens_route tool call"];
+            model_dispatch [label="Dispatch to selected model"];
+            tool_schema [label="Function schema sent to selected model"];
             model_tool_call [label="Model requests analyze_public_sources"];
-            app_tool [label="App executes Python tool"];
+            app_tool [label="App executes Python analysis tool"];
             tool_result [label="Tool result returned to model"];
             report_output [label="Structured report"];
             eval_record [label="Expected vs actual eval record"];
@@ -1674,8 +2114,10 @@ The primary audience is the intelligence analyst. Secondary audiences include em
             updated_report [label="Updated report for review"];
 
             user_input -> validation;
-            validation -> routing;
-            routing -> tool_schema;
+            validation -> router_model;
+            router_model -> route_tool;
+            route_tool -> model_dispatch;
+            model_dispatch -> tool_schema;
             tool_schema -> model_tool_call;
             model_tool_call -> app_tool;
             app_tool -> tool_result;
@@ -1690,11 +2132,21 @@ The primary audience is the intelligence analyst. Secondary audiences include em
         """
     )
 
-    st.subheader("Routing Explanation")
+    st.subheader("P3 Routing Explanation")
 
     st.write(
-        "This version uses prompt based routing rather than true multi model routing. The same model is used for generation, but the route instructions change based on audience and task. This is stated directly so the project does not claim separate model routing when it is not implemented."
+        "This version uses LLM tool based routing. When the user clicks Generate, the router model must call select_trendlens_route. The app reads that route decision, maps it to a configured generation model, and dispatches report generation to that selected model. The selected model must then call analyze_public_sources before writing the final report."
     )
+
+    st.subheader("Current Model Route Configuration")
+
+    for route_name, route_data in get_route_catalog().items():
+        st.markdown(
+            f"**{route_data['display_name']}**  \n"
+            f"Route key: `{route_name}`  \n"
+            f"Model: `{route_data['selected_model']}`  \n"
+            f"Environment key: `{route_data['model_key']}`"
+        )
 
     st.subheader("Deployment Check")
 
@@ -1711,7 +2163,6 @@ The primary audience is the intelligence analyst. Secondary audiences include em
 Only use public or synthetic information. Do not enter classified, private, restricted, protected, or sensitive information.
 """
     )
-
 
 def render_security_tab():
     st.header("Security / Login")
